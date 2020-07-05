@@ -3,6 +3,7 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/core-module.h"
 #include "ns3/csma-module.h"
+#include "ns3/applications-module.h"
 
 using namespace ns3;
 
@@ -131,6 +132,48 @@ int main(int argc, char *argv[]){
 	NetDeviceContainer subnet5Devices = csma.Install(subnet5);
 	address.SetBase("10.1.5.0","255.255.255.0");
 	Ipv4InterfaceContainer subnet5Interfaces = address.Assign(subnet5Devices);
+
+	//Adding Applications
+
+	Ipv4Address FS_Address(subnet5Interfaces.GetAddress(1));
+	uint16_t FS_port = 4500;
+
+	UdpEchoClientHelper WS1Echo(FS_Address,FS_port);
+	ApplicationContainer WS1EchoApp = WS1Echo.Install(hosts.Get(0));
+	WS1EchoApp.Start(Seconds(1.0));
+	WS1EchoApp.Stop(Seconds(2.0));
+
+	UdpEchoServerHelper FS(FS_port);
+	ApplicationContainer FS_App = FS.Install(subnet5.Get(1));
+	FS_App.Start(Seconds(1.0));
+	FS_App.Stop(Seconds(10.0));
+
+	Ipv4Address WS2_Address(subnet5Interfaces.GetAddress(2));
+	uint16_t WS2_port = 7250;
+
+	InetSocketAddress WS2_Socket_Address(WS2_Address,WS2_port);
+
+	OnOffHelper WS1_OnOff("ns3::UdpSocketFactory",WS2_Socket_Address);
+	ApplicationContainer WS1_OnOffApp = WS1_OnOff.Install(hosts.Get(0));
+	WS1_OnOffApp.Start(Seconds(1.0));
+	WS1_OnOffApp.Stop(Seconds(10.0));
+
+	PacketSinkHelper WS2Sink("ns3::UdpSocketFactory",WS2_Socket_Address);
+	ApplicationContainer WS2_SinkApp = WS2Sink.Install(branch.Get(1));
+	WS2_SinkApp.Start(Seconds(1.0));
+	WS2_SinkApp.Stop(Seconds(10.0));
+
+	Ipv4Address Printer_Address(subnet5Interfaces.GetAddress(3));
+	uint16_t Printer_port = 2650;
+	UdpClientHelper WS2_Udp(Printer_Address,Printer_port);
+	ApplicationContainer WS2_UdpApp = WS2_Udp.Install(branch.Get(1));
+	WS2_UdpApp.Start(Seconds(1.0));
+	WS2_UdpApp.Stop(Seconds(10.0));
+
+	UdpServerHelper Printer(Printer_port);
+	ApplicationContainer PrinterApp = Printer.Install(branch.Get(2));
+	PrinterApp.Start(Seconds(1.0));
+	PrinterApp.Stop(Seconds(10.0));
 
 	//run simulator
 
