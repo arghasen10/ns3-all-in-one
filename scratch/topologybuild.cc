@@ -1,11 +1,13 @@
-#include "ns3/network-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/core-module.h"
 #include "ns3/csma-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/network-module.h"
 
 using namespace ns3;
+
+NS_LOG_COMPONENT_DEFINE("topologybuild");
 
 int main(int argc, char *argv[]){
 	//Command Line Variables
@@ -15,12 +17,15 @@ int main(int argc, char *argv[]){
 	cmd.AddValue("DefaultRate","Default data rate to be used on network devices",speed);
 	cmd.Parse(argc,argv);
 
-	std::cout << "speed " << speed << std::endl;
+	// std::cout << "speed " << speed << std::endl;
 
+	LogComponentEnable("UdpEchoClientApplication",LOG_LEVEL_INFO);
+	LogComponentEnable("UdpEchoServerApplication",LOG_LEVEL_INFO);
+	LogComponentEnable("topologybuild",LOG_LEVEL_LOGIC);
 	//configuring default Attributes
 	DataRate rate(speed);
 	Time delay("2ms");
-
+	NS_LOG_LOGIC("Spped Value = " << speed);
 	Config::SetDefault("ns3::PointToPointNetDevice::DataRate",DataRateValue(rate));
 	Config::SetDefault("ns3::PointToPointChannel::Delay",TimeValue(delay));
 
@@ -28,7 +33,6 @@ int main(int argc, char *argv[]){
 	Config::SetDefault("ns3::CsmaChannel::Delay",TimeValue(delay));
 
 	//creating network nodes
-
 	NodeContainer hosts;
 	NodeContainer routers;
 	NodeContainer branch;
