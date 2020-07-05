@@ -7,7 +7,27 @@
 using namespace ns3;
 
 int main(int argc, char *argv[]){
+	//Command Line Variables
+	std::string speed = "10Mbps";
+
+	CommandLine cmd;
+	cmd.AddValue("DefaultRate","Default data rate to be used on network devices",speed);
+	cmd.Parse(argc,argv);
+
+	std::cout << "speed " << speed << std::endl;
+
+	//configuring default Attributes
+	DataRate rate(speed);
+	Time delay("2ms");
+
+	Config::SetDefault("ns3::PointToPointNetDevice::DataRate",DataRateValue(rate));
+	Config::SetDefault("ns3::PointToPointChannel::Delay",TimeValue(delay));
+
+	Config::SetDefault("ns3::CsmaChannel::DataRate",DataRateValue(rate));
+	Config::SetDefault("ns3::CsmaChannel::Delay",TimeValue(delay));
+
 	//creating network nodes
+
 	NodeContainer hosts;
 	NodeContainer routers;
 	NodeContainer branch;
@@ -23,7 +43,7 @@ int main(int argc, char *argv[]){
 
 	//create csma helper
 	CsmaHelper csma;
-
+	csma.SetChannelAttribute("DataRate",StringValue("100Mbps"));
 	//create point to point helper
 	PointToPointHelper p2p;
 
@@ -49,10 +69,18 @@ int main(int argc, char *argv[]){
 	subnet2.Add(routers.Get(0));
 	subnet2.Add(routers.Get(1));
 
+	//Configuring attributes for subnet2
+	DataRate rate_subnet2("50Mbps");
+	Time delay_subnet2("4ms");
+
 	NetDeviceContainer subnet2Devices;
 	subnet2Devices = p2p.Install(subnet2);
 	address.SetBase("10.1.2.0","255.255.255.0");
 	Ipv4InterfaceContainer subnet2Interfaces = address.Assign(subnet2Devices);
+
+	Config::Set("/NodeList/1/DeviceList/2/$ns3::PointToPointNetDevice/DataRate",DataRateValue(rate_subnet2));
+	Config::Set("/NodeList/2/DeviceList/1/$ns3::PointToPointNetDevice/DataRate",DataRateValue(rate_subnet2));
+	Config::Set("/ChannelList/1/$ns3::PointToPointChannel/Delay",TimeValue(delay_subnet2));
 
 	NodeContainer subnet3;
 	subnet3.Add(routers.Get(1));
@@ -67,8 +95,33 @@ int main(int argc, char *argv[]){
 	subnet4.Add(routers.Get(3));
 
 	NetDeviceContainer subnet4Devices = p2p.Install(subnet4);
+
+	//Configure net Device on subnet 4
+	Ptr<NetDevice> deviceA = subnet4Devices.Get(0);
+	Ptr<NetDevice> deviceB = subnet4Devices.Get(1);
+
+	NetDevice* deviceA_ptr = PeekPointer(deviceA);
+	NetDevice* deviceB_ptr = PeekPointer(deviceB);
+
+	PointToPointNetDevice* p2pDeviceA = dynamic_cast<PointToPointNetDevice*>(deviceA_ptr);
+	PointToPointNetDevice* p2pDeviceB = dynamic_cast<PointToPointNetDevice*>(deviceB_ptr);
+
+	DataRate rate_subnet4("100Mbps");
+
+	p2pDeviceA->SetAttribute("DataRate",DataRateValue(rate_subnet4));
+	p2pDeviceB->SetAttribute("DataRate",DataRateValue(rate_subnet4));
+
+	//Configuring the channel on subnet4
+	Ptr<Channel> channel = ChannelList::GetChannel(3);
+	Channel* channel_ptr = PeekPointer(channel);
+
+	Time delay_subnet4("5ms");
+
+	PointToPointChannel* p2pchannel = dynamic_cast<PointToPointChannel*>(channel_ptr);
+	p2pchannel->SetAttribute("Delay",TimeValue(delay_subnet4));
 	address.SetBase("10.1.4.0","255.255.255.0");
 	Ipv4InterfaceContainer subnet4Interfaces = address.Assign(subnet4Devices);
+
 
 	//create node container belong to subnet5
 	NodeContainer subnet5;
