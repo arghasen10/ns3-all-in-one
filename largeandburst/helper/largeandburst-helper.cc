@@ -7,11 +7,15 @@
 namespace ns3 {
 
 /* ... */
-LargeHelper::LargeHelper(Address address, uint32_t totalTxBytes, uint32_t writeSize)
+LargeHelper::LargeHelper(uint32_t totalTxBytes, uint32_t writeSize)
 {
-    m_address = address;
     m_txbytes = totalTxBytes;
     m_wsize = writeSize;
+}
+void 
+LargeHelper::SetAddress(Address address)
+{
+    m_address = address;
 }
 ApplicationContainer
 LargeHelper::Install(Ptr<Node> node) const
@@ -24,12 +28,16 @@ LargeHelper::Install(Ptr<Node> node) const
     app.Add(lt_app);
     return app;
 }
-BurstHelper::BurstHelper(Address address, uint32_t packetSize,uint32_t nPackets, uint32_t iters)
+BurstHelper::BurstHelper(uint32_t packetSize,uint32_t nPackets, uint32_t iters)
 {
-    m_address = address;
     m_pktsize = packetSize;
     m_npkts = nPackets;
     m_itrs = iters;
+}
+void
+BurstHelper::SetAddress(Address address)
+{
+    m_address = address;
 }
 ApplicationContainer
 BurstHelper::Install(Ptr<Node> node) const

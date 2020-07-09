@@ -10,7 +10,6 @@
 #include "ns3/applications-module.h"
 
 namespace ns3 {
-NS_LOG_COMPONENT_DEFINE("largeandburst");
 /* ... */
 burstApp::burstApp()
     :m_socket(0),
@@ -59,13 +58,11 @@ void burstApp::StopApplication(void)
     }
 }
 void burstApp::SendManyPackets(void){
-    LogComponentEnable("largeandburst",LOG_LEVEL_INFO);
     Ptr<Packet> packet = Create<Packet> (m_packetSize);
     if(m_itersDone++ < m_iters)
     {
         while(m_packetsSent++ < m_nPackets)
         {
-        NS_LOG_INFO("TOtal packet sent = " << m_packetsSent);
             m_socket->Send(packet);
         }
     }
@@ -74,8 +71,6 @@ void burstApp::SendManyPackets(void){
 }
 void burstApp::CallScheduler (void)
 {
-    LogComponentEnable("largeandburst",LOG_LEVEL_INFO);
-    NS_LOG_INFO("Calling the next scheduler in burst app");
     if(m_running)
     {
         Time tNext (Seconds(5));
@@ -120,7 +115,6 @@ void longTermApp::StopApplication(void){
 }
 void longTermApp::StartFlow()
 {
-    NS_LOG_LOGIC("Starting flow at time " << Simulator::Now().GetSeconds());
     m_socket->SetSendCallback(MakeCallback(&longTermApp::WriteUntilBufferFull,this));
     WriteUntilBufferFull(m_socket,m_socket->GetTxAvailable());
 

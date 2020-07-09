@@ -14,8 +14,9 @@ namespace ns3 {
 class LargeHelper
 {
     public:
-    LargeHelper(Address address, uint32_t totalTxBytes, uint32_t writeSize);
+    LargeHelper(uint32_t totalTxBytes, uint32_t writeSize);
     ApplicationContainer Install (Ptr<Node> node) const;
+    void SetAddress(Address address);
     private:
     Address m_address;
     uint32_t m_txbytes;
@@ -25,7 +26,8 @@ class LargeHelper
 class BurstHelper
 {
     public:
-    BurstHelper(Address address, uint32_t packetSize,uint32_t nPackets, uint32_t iters);
+    BurstHelper(uint32_t packetSize,uint32_t nPackets, uint32_t iters);
+    void SetAddress(Address address);
     ApplicationContainer Install (Ptr<Node> node) const;
     private:
     Address m_address;
