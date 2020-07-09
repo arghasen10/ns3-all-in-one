@@ -59,11 +59,13 @@ void burstApp::StopApplication(void)
     }
 }
 void burstApp::SendManyPackets(void){
+    LogComponentEnable("largeandburst",LOG_LEVEL_INFO);
     Ptr<Packet> packet = Create<Packet> (m_packetSize);
     if(m_itersDone++ < m_iters)
     {
         while(m_packetsSent++ < m_nPackets)
         {
+        NS_LOG_INFO("TOtal packet sent = " << m_packetsSent);
             m_socket->Send(packet);
         }
     }
@@ -72,9 +74,12 @@ void burstApp::SendManyPackets(void){
 }
 void burstApp::CallScheduler (void)
 {
+    LogComponentEnable("largeandburst",LOG_LEVEL_INFO);
+    NS_LOG_INFO("Calling the next scheduler in burst app");
     if(m_running)
     {
         Time tNext (Seconds(5));
+        
         m_sendEvent = Simulator::Schedule(tNext,&burstApp::SendManyPackets,this);
 
     }

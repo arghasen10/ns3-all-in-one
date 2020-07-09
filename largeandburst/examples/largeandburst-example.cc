@@ -42,18 +42,18 @@ main (int argc, char *argv[])
   PacketSinkHelper packetSinkHelper ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkport));
   ApplicationContainer sinkApps = packetSinkHelper.Install (nodes.Get (1));
   sinkApps.Start (Seconds (0.));
-  sinkApps.Stop (Seconds (20.));
+  sinkApps.Stop (Seconds (60.));
   
   BurstHelper burstdev(sinkAddress,1040,4,2);
   ApplicationContainer burstapp = burstdev.Install(nodes.Get(0));
   burstapp.Start(Seconds(1.));
-  burstapp.Stop(Seconds(60.));
+  burstapp.Stop(Seconds(20.));
 
   LargeHelper ltdev(sinkAddress,2000000, 1040);
   ApplicationContainer ltapp = ltdev.Install(nodes.Get(0));
   ltapp.Start(Seconds(1.));
-  ltapp.Stop(Seconds(60.));
-
+  ltapp.Stop(Seconds(20.));
+  p2p.EnablePcapAll("largeandburst-example");
   Simulator::Stop (Seconds (80));
   Simulator::Run ();
   Simulator::Destroy ();
