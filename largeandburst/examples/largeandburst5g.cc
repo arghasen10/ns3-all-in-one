@@ -1,26 +1,3 @@
-/*
- -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*-
-
- *   Copyright (c) 2018 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
- *
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License version 2 as
- *   published by the Free Software Foundation;
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *
- *   Author:  Biljana Bojovic <bbojovic@cttc.es>
- *
- */
-
 
 #include "ns3/core-module.h"
 #include "ns3/config-store.h"
@@ -147,20 +124,8 @@ main (int argc, char *argv[])
   NS_ABORT_IF (frequencyBwp1 < 6e9 || frequencyBwp1 > 100e9);
   NS_ABORT_IF (frequencyBwp2 < 6e9 || frequencyBwp2 > 100e9);
 
-  //ConfigStore inputConfig;
-  //inputConfig.ConfigureDefaults ();
 
-  // enable logging or not
-  if(logging)
-    {
-    //   LogComponentEnable ("MmWave3gppPropagationLossModel", LOG_LEVEL_ALL);
-    //   LogComponentEnable ("MmWave3gppBuildingsPropagationLossModel", LOG_LEVEL_ALL);
-    //   LogComponentEnable ("MmWave3gppChannel", LOG_LEVEL_ALL);
-    //   LogComponentEnable ("UdpClient", LOG_LEVEL_INFO);
-    //   LogComponentEnable ("UdpServer", LOG_LEVEL_INFO);
-    //   LogComponentEnable ("LtePdcp", LOG_LEVEL_INFO);
-      LogComponentEnable("PacketSink",LOG_LEVEL_INFO);
-    }
+  LogComponentEnable("PacketSink",LOG_LEVEL_INFO);
   LogComponentEnable ("example",LOG_LEVEL_INFO);  
   Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::ChannelCondition",
                       StringValue("l"));
@@ -179,10 +144,6 @@ main (int argc, char *argv[])
                       UintegerValue(999999999));
 
   Config::SetDefault("ns3::PointToPointEpcHelper::S1uLinkDelay", TimeValue (MilliSeconds(0)));
-
-  //Config::SetDefault("ns3::MmWaveUeNetDevice::AntennaNum", UintegerValue (4));
-  //Config::SetDefault("ns3::MmWaveEnbNetDevice::AntennaNum", UintegerValue (16));
-  //Config::SetDefault("ns3::MmWaveEnbPhy::TxPower", DoubleValue (txPower));
 
 
   if(singleBwp)
@@ -365,87 +326,6 @@ main (int argc, char *argv[])
       ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
     }
 
-//   // assign IP address to UEs, and install UDP downlink applications
-//   uint16_t dlPort = 1234;
-//   ApplicationContainer clientApps, serverApps;
-
-//   ApplicationContainer clientAppsEmbb, serverAppsEmbb;
-
-//   UdpServerHelper dlPacketSinkHelper (dlPort);
-//   serverApps.Add (dlPacketSinkHelper.Install (ueNodes));
-//   NS_LOG_INFO ("Total UE nodes created = " << ueNodes.GetN() << " including one server node");
-//   // configure here UDP traffic
-//   for (uint32_t j = 0; j < ueNodes.GetN(); ++j)
-//     {
-//       UdpClientHelper dlClient (ueIpIface.GetAddress (j), dlPort);
-//       dlClient.SetAttribute ("MaxPackets", UintegerValue(0xFFFFFFFF));
-//       //dlClient.SetAttribute ("MaxPackets", UintegerValue(10));
-
-//       if (udpFullBuffer)
-//         {
-//           double bitRate = 75000000; // 75 Mb/s will saturate the system of 20 MHz
-
-//           if (bandwidthBwp1 > 20e6)
-//             {
-//               bitRate *=  bandwidthBwp1 / 20e6;
-//             }
-//           lambdaUll = 1.0 / ((udpPacketSizeUll * 8) / bitRate);
-
-
-//           bitRate = 75000000; // 75 Mb/s will saturate the system of 20 MHz
-
-//           if (bandwidthBwp2 > 20e6)
-//             {
-//               bitRate *=  bandwidthBwp2 / 20e6;
-//             }
-//           lambdaUll = 1.0 / ((udpPacketSizeBe * 8) / bitRate);
-//         }
-
-//       if (j % 2 == 0)
-//         {
-//           dlClient.SetAttribute("PacketSize", UintegerValue(udpPacketSizeUll));
-//           dlClient.SetAttribute ("Interval", TimeValue (Seconds(1.0/lambdaUll)));
-//         }
-//       else
-//         {
-//           dlClient.SetAttribute("PacketSize", UintegerValue(udpPacketSizeBe));
-//           dlClient.SetAttribute ("Interval", TimeValue (Seconds(1.0/lambdaBe)));
-//         }
-
-//       clientApps.Add (dlClient.Install (remoteHost));
-
-
-//       Ptr<EpcTft> tft = Create<EpcTft> ();
-//       EpcTft::PacketFilter dlpf;
-//       dlpf.localPortStart = dlPort;
-//       dlpf.localPortEnd = dlPort;
-//       dlPort++;
-//       tft->Add (dlpf);
-
-//       enum EpsBearer::Qci q;
-
-//       if (j % 2 == 0)
-//         {
-//           q = EpsBearer::NGBR_LOW_LAT_EMBB;
-//         }
-//       else
-//         {
-//           q = EpsBearer::GBR_CONV_VOICE;
-//         }
-
-//       //      q = EpsBearer::NGBR_VIDEO_TCP_DEFAULT;
-
-//       EpsBearer bearer (q);
-//       mmWaveHelper->ActivateDedicatedEpsBearer(ueNetDev.Get(j), bearer, tft);
-//     }
-//   // start UDP server and client apps
-//   serverApps.Start(Seconds(udpAppStartTime));
-//   clientApps.Start(Seconds(udpAppStartTime));
-//   serverApps.Stop(Seconds(simTime));
-//   clientApps.Stop(Seconds(simTime));
-
-  // attach UEs to the closest eNB
-
   uint16_t sinkport = 8080;
   Address sinkAddress(InetSocketAddress(Ipv4Address::GetAny(),sinkport));
   PacketSinkHelper packetSinkHelper("ns3::TcpSocketFactory",sinkAddress);
@@ -466,6 +346,7 @@ main (int argc, char *argv[])
 
   clientApps.Start(Seconds(1.));
   clientApps.Stop(Seconds(10.));
+  // attach UEs to the closest eNB
   mmWaveHelper->AttachToClosestEnb (ueNetDev, enbNetDev);
 
   NS_LOG_INFO("Check PCAP files largeandburst-example-*-*.pcap");
