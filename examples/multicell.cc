@@ -71,7 +71,7 @@ main (int argc, char *argv[])
   // Command line arguments
   CommandLine cmd;
   cmd.Parse (argc, argv);
-  double simTime = 5;
+  double simTime = 10;
 
   LogComponentEnable("PacketSink",LOG_LEVEL_INFO);
 
@@ -167,7 +167,7 @@ main (int argc, char *argv[])
   // create LTE, mmWave eNB nodes and UE node
   double gNbHeight = 10;
   uint16_t gNbNum = 4;
-  uint16_t ueNum = 1;
+  uint16_t ueNum = 10;
   NodeContainer ueNodes;
   NodeContainer mmWaveEnbNodes;
   NodeContainer lteEnbNodes;
@@ -183,11 +183,19 @@ main (int argc, char *argv[])
   Ptr<ListPositionAllocator> apPositionAlloc = CreateObject<ListPositionAllocator> ();
   Ptr<ListPositionAllocator> staPositionAllocator = CreateObject<ListPositionAllocator> ();
 
-  staPositionAllocator->Add (Vector (0.0,0.0,1.5));
+  
+  double x_random, y_random;
+  for(uint32_t i = 0; i < ueNodes.GetN(); i ++)
+  {
+    x_random = (rand() % 1000) + 1;
+    y_random = (rand() % 1000) + 1;
+    staPositionAllocator->Add (Vector (x_random, y_random, 1.5));
+  }
 
   ueMobility.SetPositionAllocator(staPositionAllocator);
   ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-    "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)));
+    "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
+    "Speed", StringValue("ns3::UniformRandomVariable[Min=20|Max=50]"));
   ueMobility.Install (ueNodes);
 
   apPositionAlloc->Add (Vector (333.0, 333.0,gNbHeight));
@@ -204,6 +212,8 @@ main (int argc, char *argv[])
   gNbMobility.SetPositionAllocator (apPositionAlloc);
   gNbMobility.Install (mmWaveEnbNodes);
   
+  AnimationInterface::SetConstantPosition(pgw,490,490);
+  AnimationInterface::SetConstantPosition(remoteHostContainer.Get(0),510,490);
   // Install mmWave, lte, mc Devices to the nodes
   NetDeviceContainer lteEnbDevs = mmwaveHelper->InstallLteEnbDevice (lteEnbNodes);
   NetDeviceContainer mmWaveEnbDevs = mmwaveHelper->InstallEnbDevice (mmWaveEnbNodes);
@@ -278,10 +288,25 @@ main (int argc, char *argv[])
 
   mmwaveHelper->EnableTraces ();
   Simulator::Stop (Seconds (simTime));
-  AnimationInterface anim ("animation-two-enbs-grid.xml");
+  AnimationInterface anim ("animation-two-enbs-grid-final.xml");
+  for (uint32_t i = 0; i < lteEnbNodes.GetN(); i++)
+  {
+    anim.UpdateNodeDescription(lteEnbNodes.Get(i), "LTE eNb");
+    anim.UpdateNodeColor (lteEnbNodes.Get(i), 255, 0, 0);
+  }
+  for (uint32_t i =0; i < mmWaveEnbNodes.GetN(); i++)
+  {
+    anim.UpdateNodeDescription(mmWaveEnbNodes.Get(i), "gNb"+std::to_string(i));
+    anim.UpdateNodeColor(mmWaveEnbNodes.Get(i),0,255,0);
+  }
+  for (uint32_t i=0; i< ueNodes.GetN(); i++)
+  {
+    anim.UpdateNodeDescription(ueNodes.Get(i), "UE"+std::to_string(i));
+    anim.UpdateNodeColor (ueNodes.Get(i),0,0,255);
+  }
+
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;
 }
-
 
