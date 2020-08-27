@@ -49,6 +49,8 @@ using namespace mmwave;
  * attaches one MC UE to both and starts a flow for the UE to and from a remote host.
  */
 
+NS_LOG_COMPONENT_DEFINE ("multicell");
+
 void
 PrintPosition (Ptr<Node> node)
 {
@@ -56,7 +58,103 @@ PrintPosition (Ptr<Node> node)
   NS_LOG_UNCOND ("Position +****************************** " << model->GetPosition () << " at time " << Simulator::Now ().GetSeconds ());
 }
 
-NS_LOG_COMPONENT_DEFINE ("multicell");
+bool
+AreOverlapping (Box a, Box b)
+{
+  return !((a.xMin > b.xMax) || (b.xMin > a.xMax) || (a.yMin > b.yMax) || (b.yMin > a.yMax) );
+}
+
+
+bool
+OverlapWithAnyPrevious (Box box, std::list<Box> m_previousBlocks)
+{
+  for (std::list<Box>::iterator it = m_previousBlocks.begin (); it != m_previousBlocks.end (); ++it)
+    {
+      if (AreOverlapping (*it,box))
+        {
+          return true;
+        }
+    }
+  return false;
+}
+
+
+std::pair<Box, std::list<Box> >
+GenerateBuildingBounds (double xCoormin, double yCoormin, double xArea, double yArea, double maxBuildSize, std::list<Box> m_previousBlocks )
+{
+
+  Ptr<UniformRandomVariable> xMinBuilding = CreateObject<UniformRandomVariable> ();
+  xMinBuilding->SetAttribute ("Min",DoubleValue (xCoormin));
+  xMinBuilding->SetAttribute ("Max",DoubleValue (xArea));
+
+  NS_LOG_UNCOND ("min " << xCoormin << " max " << xArea);
+
+  Ptr<UniformRandomVariable> yMinBuilding = CreateObject<UniformRandomVariable> ();
+  yMinBuilding->SetAttribute ("Min",DoubleValue (yCoormin));
+  yMinBuilding->SetAttribute ("Max",DoubleValue (yArea));
+
+  NS_LOG_UNCOND ("min " << yCoormin << " max " << yArea);
+
+  Box box;
+  uint32_t attempt = 0;
+  do
+    {
+      NS_ASSERT_MSG (attempt < 100, "Too many failed attempts to position non-overlapping buildings. Maybe area too small or too many buildings?");
+      box.xMin = xMinBuilding->GetValue ();
+
+      Ptr<UniformRandomVariable> xMaxBuilding = CreateObject<UniformRandomVariable> ();
+      xMaxBuilding->SetAttribute ("Min",DoubleValue (box.xMin));
+      xMaxBuilding->SetAttribute ("Max",DoubleValue (box.xMin + maxBuildSize));
+      box.xMax = xMaxBuilding->GetValue ();
+
+      box.yMin = yMinBuilding->GetValue ();
+
+      Ptr<UniformRandomVariable> yMaxBuilding = CreateObject<UniformRandomVariable> ();
+      yMaxBuilding->SetAttribute ("Min",DoubleValue (box.yMin));
+      yMaxBuilding->SetAttribute ("Max",DoubleValue (box.yMin + maxBuildSize));
+      box.yMax = yMaxBuilding->GetValue ();
+
+      ++attempt;
+    }
+  while (OverlapWithAnyPrevious (box, m_previousBlocks));
+
+
+  NS_LOG_UNCOND ("Building in coordinates (" << box.xMin << " , " << box.yMin << ") and ("  << box.xMax << " , " << box.yMax <<
+                 ") accepted after " << attempt << " attempts");
+  m_previousBlocks.push_back (box);
+  std::pair<Box, std::list<Box> > pairReturn = std::make_pair (box,m_previousBlocks);
+  return pairReturn;
+
+}
+
+static ns3::GlobalValue g_interPckInterval ("interPckInterval", "Interarrival time of UDP packets (us)",
+                                            ns3::UintegerValue (20), ns3::MakeUintegerChecker<uint32_t> ());
+static ns3::GlobalValue g_bufferSize ("bufferSize", "RLC tx buffer size (MB)",
+                                      ns3::UintegerValue (20), ns3::MakeUintegerChecker<uint32_t> ());
+static ns3::GlobalValue g_x2Latency ("x2Latency", "Latency on X2 interface (us)",
+                                     ns3::DoubleValue (500), ns3::MakeDoubleChecker<double> ());
+static ns3::GlobalValue g_mmeLatency ("mmeLatency", "Latency on MME interface (us)",
+                                      ns3::DoubleValue (10000), ns3::MakeDoubleChecker<double> ());
+static ns3::GlobalValue g_rlcAmEnabled ("rlcAmEnabled", "If true, use RLC AM, else use RLC UM",
+                                        ns3::BooleanValue (true), ns3::MakeBooleanChecker ());
+static ns3::GlobalValue g_runNumber ("runNumber", "Run number for rng",
+                                     ns3::UintegerValue (10), ns3::MakeUintegerChecker<uint32_t> ());
+static ns3::GlobalValue g_outPath ("outPath",
+                                   "The path of output log files",
+                                   ns3::StringValue ("./"), ns3::MakeStringChecker ());
+static ns3::GlobalValue g_noiseAndFilter ("noiseAndFilter", "If true, use noisy SINR samples, filtered. If false, just use the SINR measure",
+                                          ns3::BooleanValue (false), ns3::MakeBooleanChecker ());
+static ns3::GlobalValue g_handoverMode ("handoverMode",
+                                        "Handover mode",
+                                        ns3::UintegerValue (3), ns3::MakeUintegerChecker<uint8_t> ());
+static ns3::GlobalValue g_reportTablePeriodicity ("reportTablePeriodicity", "Periodicity of RTs",
+                                                  ns3::UintegerValue (1600), ns3::MakeUintegerChecker<uint32_t> ());
+static ns3::GlobalValue g_outageThreshold ("outageTh", "Outage threshold",
+                                           ns3::DoubleValue (-5), ns3::MakeDoubleChecker<double> ());
+static ns3::GlobalValue g_lteUplink ("lteUplink", "If true, always use LTE for uplink signalling",
+                                     ns3::BooleanValue (false), ns3::MakeBooleanChecker ());
+
+
 
 int
 main (int argc, char *argv[])
@@ -71,14 +169,91 @@ main (int argc, char *argv[])
   // Command line arguments
   CommandLine cmd;
   cmd.Parse (argc, argv);
-  double simTime = 10;
 
-  LogComponentEnable("PacketSink",LOG_LEVEL_INFO);
+  UintegerValue uintegerValue;
+  BooleanValue booleanValue;
+  StringValue stringValue;
+  DoubleValue doubleValue;
 
+  // Variables for the RT
+  int windowForTransient = 150; // number of samples for the vector to use in the filter
+  GlobalValue::GetValueByName ("reportTablePeriodicity", uintegerValue);
+  int ReportTablePeriodicity = (int)uintegerValue.Get (); // in microseconds
+  if (ReportTablePeriodicity == 1600)
+    {
+      windowForTransient = 150;
+    }
+  else if (ReportTablePeriodicity == 25600)
+    {
+      windowForTransient = 50;
+    }
+  else if (ReportTablePeriodicity == 12800)
+    {
+      windowForTransient = 100;
+    }
+  else
+    {
+      NS_ASSERT_MSG (false, "Unrecognized");
+    }
+
+  int vectorTransient = windowForTransient * ReportTablePeriodicity;
+
+  // params for RT, filter, HO mode
+  GlobalValue::GetValueByName ("noiseAndFilter", booleanValue);
+  bool noiseAndFilter = booleanValue.Get ();
+  GlobalValue::GetValueByName ("handoverMode", uintegerValue);
+  uint8_t hoMode = uintegerValue.Get ();
+  GlobalValue::GetValueByName ("outageTh", doubleValue);
+  double outageTh = doubleValue.Get ();
+
+  GlobalValue::GetValueByName ("rlcAmEnabled", booleanValue);
+  bool rlcAmEnabled = booleanValue.Get ();
+  GlobalValue::GetValueByName ("bufferSize", uintegerValue);
+  uint32_t bufferSize = uintegerValue.Get ();
+  GlobalValue::GetValueByName ("interPckInterval", uintegerValue);
+  uint32_t interPacketInterval = uintegerValue.Get ();
+  GlobalValue::GetValueByName ("x2Latency", doubleValue);
+  double x2Latency = doubleValue.Get ();
+  GlobalValue::GetValueByName ("mmeLatency", doubleValue);
+  double mmeLatency = doubleValue.Get ();
+
+  double simTime = 1.1;
+  NS_LOG_UNCOND ("rlcAmEnabled " << rlcAmEnabled << " bufferSize " << bufferSize << " interPacketInterval " <<
+                 interPacketInterval << " x2Latency " << x2Latency << " mmeLatency " << mmeLatency);
+
+  // rng things
+  GlobalValue::GetValueByName ("runNumber", uintegerValue);
+  uint32_t runSet = uintegerValue.Get ();
+  uint32_t seedSet = 5;
+  RngSeedManager::SetSeed (seedSet);
+  RngSeedManager::SetRun (runSet);
+  char seedSetStr[21];
+  char runSetStr[21];
+  sprintf (seedSetStr, "%d", seedSet);
+  sprintf (runSetStr, "%d", runSet);
+
+  GlobalValue::GetValueByName ("outPath", stringValue);
+  std::string path = stringValue.Get ();
+  std::string mmWaveOutName = "MmWaveSwitchStats";
+  std::string lteOutName = "LteSwitchStats";
+  std::string dlRlcOutName = "DlRlcStats";
+  std::string dlPdcpOutName = "DlPdcpStats";
+  std::string ulRlcOutName = "UlRlcStats";
+  std::string ulPdcpOutName = "UlPdcpStats";
+  std::string  ueHandoverStartOutName =  "UeHandoverStartStats";
+  std::string enbHandoverStartOutName = "EnbHandoverStartStats";
+  std::string  ueHandoverEndOutName =  "UeHandoverEndStats";
+  std::string enbHandoverEndOutName = "EnbHandoverEndStats";
+  std::string cellIdInTimeOutName = "CellIdStats";
+  std::string cellIdInTimeHandoverOutName = "CellIdStatsHandover";
+  std::string mmWaveSinrOutputFilename = "MmWaveSinrTime";
+  std::string x2statOutputFilename = "X2Stats";
+  std::string udpSentFilename = "UdpSent";
+  std::string udpReceivedFilename = "UdpReceived";
+  std::string extension = ".txt";
   std::string version;
   version = "mc";
-  ConfigStore inputConfig;
-  inputConfig.ConfigureDefaults ();
+  Config::SetDefault ("ns3::MmWaveUeMac::UpdateUeSinrEstimatePeriod", DoubleValue (0));
 
   //get current time
   time_t rawtime;
@@ -89,6 +264,7 @@ main (int argc, char *argv[])
   strftime (buffer,80,"%d_%m_%Y_%I_%M_%S",timeinfo);
   std::string time_str (buffer);
 
+  Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnabled));
   Config::SetDefault ("ns3::MmWaveHelper::HarqEnabled", BooleanValue (harqEnabled));
   Config::SetDefault ("ns3::MmWaveFlexTtiMacScheduler::HarqEnabled", BooleanValue (harqEnabled));
   Config::SetDefault ("ns3::MmWaveFlexTtiMaxWeightMacScheduler::HarqEnabled", BooleanValue (harqEnabled));
@@ -106,20 +282,85 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteRlcUmLowLat::ReportBufferStatusTimer", TimeValue (MicroSeconds (100.0)));
   Config::SetDefault ("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue (320));
   Config::SetDefault ("ns3::LteEnbRrc::FirstSibTime", UintegerValue (2));
+  Config::SetDefault ("ns3::MmWavePointToPointEpcHelper::X2LinkDelay", TimeValue (MicroSeconds (x2Latency)));
   Config::SetDefault ("ns3::MmWavePointToPointEpcHelper::X2LinkDataRate", DataRateValue (DataRate ("1000Gb/s")));
   Config::SetDefault ("ns3::MmWavePointToPointEpcHelper::X2LinkMtu",  UintegerValue (10000));
   Config::SetDefault ("ns3::MmWavePointToPointEpcHelper::S1uLinkDelay", TimeValue (MicroSeconds (1000)));
+  Config::SetDefault ("ns3::MmWavePointToPointEpcHelper::S1apLinkDelay", TimeValue (MicroSeconds (mmeLatency)));
+  Config::SetDefault ("ns3::McStatsCalculator::MmWaveOutputFilename", StringValue                 (path + version + mmWaveOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::McStatsCalculator::LteOutputFilename", StringValue                    (path + version + lteOutName    + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::McStatsCalculator::CellIdInTimeOutputFilename", StringValue           (path + version + cellIdInTimeOutName    + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::MmWaveBearerStatsCalculator::DlRlcOutputFilename", StringValue        (path + version + dlRlcOutName   + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::MmWaveBearerStatsCalculator::UlRlcOutputFilename", StringValue        (path + version + ulRlcOutName   + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::MmWaveBearerStatsCalculator::DlPdcpOutputFilename", StringValue       (path + version + dlPdcpOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::MmWaveBearerStatsCalculator::UlPdcpOutputFilename", StringValue       (path + version + ulPdcpOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::UeHandoverStartOutputFilename", StringValue    (path + version +  ueHandoverStartOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::EnbHandoverStartOutputFilename", StringValue   (path + version + enbHandoverStartOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::UeHandoverEndOutputFilename", StringValue    (path + version +  ueHandoverEndOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::EnbHandoverEndOutputFilename", StringValue   (path + version + enbHandoverEndOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::CellIdStatsHandoverOutputFilename", StringValue (path + version + cellIdInTimeHandoverOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::MmWaveSinrOutputFilename", StringValue (path + version + mmWaveSinrOutputFilename + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::CoreNetworkStatsCalculator::X2FileName", StringValue                  (path + version + x2statOutputFilename    + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  //std::string lostFilename = path + version + "LostUdpPackets" +  "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension;
+  //Config::SetDefault ("ns3::UdpServer::ReceivedPacketsFilename", StringValue(path + version + "ReceivedUdp" +  "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  //Config::SetDefault ("ns3::UdpClient::SentPacketsFilename", StringValue(path + version + "SentUdp" +  "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  //Config::SetDefault ("ns3::UdpServer::ReceivedSnFilename", StringValue(path + version + "ReceivedSn" +  "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+  Config::SetDefault ("ns3::LteRlcAm::BufferSizeFilename", StringValue (path + version + "RlcAmBufferSize" +  "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
+
+  Config::SetDefault ("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue (bufferSize * 1024 * 1024));
+  Config::SetDefault ("ns3::LteRlcUmLowLat::MaxTxBufferSize", UintegerValue (bufferSize * 1024 * 1024));
   Config::SetDefault ("ns3::LteRlcAm::StatusProhibitTimer", TimeValue (MilliSeconds (10.0)));
+  Config::SetDefault ("ns3::LteRlcAm::MaxTxBufferSize", UintegerValue (bufferSize * 1024 * 1024));
+
+    // handover and RT related params
+  switch (hoMode)
+    {
+    case 1:
+      Config::SetDefault ("ns3::LteEnbRrc::SecondaryCellHandoverMode", EnumValue (LteEnbRrc::THRESHOLD));
+      break;
+    case 2:
+      Config::SetDefault ("ns3::LteEnbRrc::SecondaryCellHandoverMode", EnumValue (LteEnbRrc::FIXED_TTT));
+      break;
+    case 3:
+      Config::SetDefault ("ns3::LteEnbRrc::SecondaryCellHandoverMode", EnumValue (LteEnbRrc::DYNAMIC_TTT));
+      break;
+    }
 
   Config::SetDefault ("ns3::LteEnbRrc::FixedTttValue", UintegerValue (150));
+  Config::SetDefault ("ns3::LteEnbRrc::CrtPeriod", IntegerValue (ReportTablePeriodicity));
+  Config::SetDefault ("ns3::LteEnbRrc::OutageThreshold", DoubleValue (outageTh));
+  Config::SetDefault ("ns3::MmWaveEnbPhy::UpdateSinrEstimatePeriod", IntegerValue (ReportTablePeriodicity));
+  Config::SetDefault ("ns3::MmWaveEnbPhy::Transient", IntegerValue (vectorTransient));
+  Config::SetDefault ("ns3::MmWaveEnbPhy::NoiseAndFilter", BooleanValue (noiseAndFilter));
+
+  GlobalValue::GetValueByName ("lteUplink", booleanValue);
+  bool lteUplink = booleanValue.Get ();
+
+  Config::SetDefault ("ns3::McUePdcp::LteUplink", BooleanValue (lteUplink));
+  std::cout << "Lte uplink " << lteUplink << "\n";
 
   // settings for the 3GPP the channel
+  Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::ChannelCondition", StringValue ("a"));
+  Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::Scenario", StringValue ("UMi-StreetCanyon"));
+  Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::OptionalNlos", BooleanValue (true));
+  Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::Shadowing", BooleanValue (true)); // enable or disable the shadowing effect
+  Config::SetDefault ("ns3::MmWave3gppBuildingsPropagationLossModel::UpdateCondition", BooleanValue (true)); // enable or disable the LOS/NLOS update when the UE moves
+  Config::SetDefault ("ns3::AntennaArrayModel::AntennaHorizontalSpacing", DoubleValue (0.5));
+  Config::SetDefault ("ns3::AntennaArrayModel::AntennaVerticalSpacing", DoubleValue (0.5));
+  Config::SetDefault ("ns3::MmWave3gppChannel::UpdatePeriod", TimeValue (MilliSeconds (100))); // interval after which the channel for a moving user is updated,
+  
+   // with spatial consistency procedure. If 0, spatial consistency is not used
+  Config::SetDefault ("ns3::MmWave3gppChannel::DirectBeam", BooleanValue (true)); // Set true to perform the beam in the exact direction of receiver node.
+  Config::SetDefault ("ns3::MmWave3gppChannel::Blockage", BooleanValue (true)); // use blockage or not
+  Config::SetDefault ("ns3::MmWave3gppChannel::PortraitMode", BooleanValue (true)); // use blockage model with UT in portrait mode
+  Config::SetDefault ("ns3::MmWave3gppChannel::NumNonselfBlocking", IntegerValue (4)); // number of non-self blocking obstacles
+
   // set the number of antennas in the devices
   Config::SetDefault ("ns3::McUeNetDevice::AntennaNum", UintegerValue(16));
   Config::SetDefault ("ns3::MmWaveEnbNetDevice::AntennaNum", UintegerValue(64));
 
   Ptr<MmWaveHelper> mmwaveHelper = CreateObject<MmWaveHelper> ();
-  if (false)
+  if (true)
     {
       mmwaveHelper->SetAttribute ("PathlossModel", StringValue ("ns3::MmWave3gppBuildingsPropagationLossModel"));
     }
@@ -142,6 +383,7 @@ main (int argc, char *argv[])
   cmd.Parse (argc, argv);
 
   // Get SGW/PGW and create a single RemoteHost
+  Ptr<Node> mme = epcHelper->GetMmeNode ();
   Ptr<Node> pgw = epcHelper->GetPgwNode ();
   NodeContainer remoteHostContainer;
   remoteHostContainer.Create (1);
@@ -177,6 +419,52 @@ main (int argc, char *argv[])
   ueNodes.Create (ueNum);
   allEnbNodes.Add (lteEnbNodes);
   allEnbNodes.Add (mmWaveEnbNodes);
+
+  //Generate Buildings 
+  std::vector<Ptr<Building> > buildingVector;
+
+  double maxBuildingSize = 20;
+  double  maxXaxis = 640, maxYaxis = 370, minxAxis = 340, minYaxis = 310;
+
+  for(uint32_t buildingindex = 0; buildingindex < 4; buildingindex++)
+  {
+      Ptr < Building > building = Create<Building> ();
+
+      std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (minxAxis, minYaxis, 
+                maxXaxis, maxYaxis, maxBuildingSize, m_previousBlocks);
+      m_previousBlocks = std::get<1> (pairBuildings);
+      Box box = std::get<0> (pairBuildings);
+      Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
+      randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
+      randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
+      double buildingHeight = randomBuildingZ->GetValue ();
+
+      building->SetBoundaries (Box (box.xMin, box.xMax,
+                                    box.yMin,  box.yMax,
+                                    0.0, buildingHeight));
+      buildingVector.push_back (building);
+  }
+  maxXaxis = 640, maxYaxis = 720, minxAxis = 340, minYaxis = 650;
+    for(uint32_t buildingindex = 0; buildingindex < 4; buildingindex++)
+  {
+      Ptr < Building > building = Create<Building> ();
+
+      std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (340, 650, 
+                640, 720, maxBuildingSize, m_previousBlocks);
+      m_previousBlocks = std::get<1> (pairBuildings);
+      Box box = std::get<0> (pairBuildings);
+      Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
+      randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
+      randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
+      double buildingHeight = randomBuildingZ->GetValue ();
+
+      building->SetBoundaries (Box (box.xMin, box.xMax,
+                                    box.yMin,  box.yMax,
+                                    0.0, buildingHeight));
+      buildingVector.push_back (building);
+  }
+
+
   MobilityHelper gNbMobility, ueMobility, LteMobility;
   Ptr<ListPositionAllocator> ltepositionAloc = CreateObject<ListPositionAllocator> ();
     
@@ -197,6 +485,7 @@ main (int argc, char *argv[])
     "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
     "Speed", StringValue("ns3::UniformRandomVariable[Min=20|Max=50]"));
   ueMobility.Install (ueNodes);
+  BuildingsHelper::Install(ueNodes);
 
   apPositionAlloc->Add (Vector (333.0, 333.0,gNbHeight));
   apPositionAlloc->Add (Vector (666.0, 333.0, gNbHeight));
@@ -211,9 +500,11 @@ main (int argc, char *argv[])
   gNbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   gNbMobility.SetPositionAllocator (apPositionAlloc);
   gNbMobility.Install (mmWaveEnbNodes);
+  BuildingsHelper::Install(allEnbNodes);
   
-  AnimationInterface::SetConstantPosition(pgw,490,490);
-  AnimationInterface::SetConstantPosition(remoteHostContainer.Get(0),510,490);
+  AnimationInterface::SetConstantPosition(mme,580,580);
+  AnimationInterface::SetConstantPosition(pgw,640,580);
+  AnimationInterface::SetConstantPosition(remoteHostContainer.Get(0),740,580);
   // Install mmWave, lte, mc Devices to the nodes
   NetDeviceContainer lteEnbDevs = mmwaveHelper->InstallLteEnbDevice (lteEnbNodes);
   NetDeviceContainer mmWaveEnbDevs = mmwaveHelper->InstallEnbDevice (mmWaveEnbNodes);
@@ -285,10 +576,10 @@ main (int argc, char *argv[])
     {
       Simulator::Schedule (Seconds (i * simTime / numPrints), &PrintPosition, ueNodes.Get (0));
     }
-
+  BuildingsHelper::MakeMobilityModelConsistent ();
   mmwaveHelper->EnableTraces ();
   Simulator::Stop (Seconds (simTime));
-  AnimationInterface anim ("animation-two-enbs-grid-final.xml");
+  AnimationInterface anim ("animation-two-enbs-grid-final-stats.xml");
   for (uint32_t i = 0; i < lteEnbNodes.GetN(); i++)
   {
     anim.UpdateNodeDescription(lteEnbNodes.Get(i), "LTE eNb");
@@ -304,6 +595,9 @@ main (int argc, char *argv[])
     anim.UpdateNodeDescription(ueNodes.Get(i), "UE"+std::to_string(i));
     anim.UpdateNodeColor (ueNodes.Get(i),0,0,255);
   }
+  anim.UpdateNodeDescription(pgw,"PGW");
+  anim.UpdateNodeDescription(mme,"MME");
+  anim.UpdateNodeDescription(remoteHostContainer.Get(0),"Remote Host");
 
   Simulator::Run ();
   Simulator::Destroy ();
