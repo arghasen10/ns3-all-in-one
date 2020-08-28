@@ -16,6 +16,9 @@
  * Author: Michele Polese <michele.polese@gmail.com>
  */
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include "ns3/mmwave-helper.h"
 #include "ns3/epc-helper.h"
 #include "ns3/core-module.h"
@@ -26,14 +29,18 @@
 #include "ns3/applications-module.h"
 #include "ns3/point-to-point-helper.h"
 #include "ns3/config-store.h"
+#include "ns3/config-store-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/mmwave-point-to-point-epc-helper.h"
+#include "ns3/flow-monitor-module.h"
 //#include "ns3/gtk-config-store.h"
 #include <ns3/buildings-helper.h>
 #include <ns3/buildings-module.h>
 #include <ns3/random-variable-stream.h>
 #include <ns3/lte-ue-net-device.h>
 #include "ns3/log.h"
+#include "ns3/internet-apps-module.h"
+#include "ns3/dash-helper.h"
 
 #include <iostream>
 #include <ctime>
@@ -50,6 +57,24 @@ using namespace mmwave;
  */
 
 NS_LOG_COMPONENT_DEFINE ("multicell");
+
+
+void
+onStart (int *count)
+{
+  std::cout << "Starting at:" << Simulator::Now () << std::endl;
+  (*count)++;
+}
+void
+onStop (int *count)
+{
+  std::cout << "Stoping at:" << Simulator::Now () << std::endl;
+  (*count)--;
+  if (!(*count))
+    {
+      Simulator::Stop ();
+    }
+}
 
 void
 PrintPosition (Ptr<Node> node)
@@ -154,6 +179,151 @@ static ns3::GlobalValue g_outageThreshold ("outageTh", "Outage threshold",
 static ns3::GlobalValue g_lteUplink ("lteUplink", "If true, always use LTE for uplink signalling",
                                      ns3::BooleanValue (false), ns3::MakeBooleanChecker ());
 
+void
+storeFlowMonitor (Ptr<ns3::FlowMonitor> monitor,
+                  FlowMonitorHelper &flowmonHelper)
+{
+  // Print per-flow statistics
+  monitor->CheckForLostPackets ();
+  Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (
+      flowmonHelper.GetClassifier ());
+  FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats ();
+
+  double averageFlowThroughput = 0.0;
+  double averageFlowDelay = 0.0;
+
+  std::ofstream outFile;
+  std::string filename = "multicellStat/default";
+  outFile.open (filename.c_str (), std::ofstream::out | std::ofstream::trunc);
+  if (!outFile.is_open ())
+    {
+      std::cerr << "Can't open file " << filename << std::endl;
+      return;
+    }
+
+  outFile.setf (std::ios_base::fixed);
+
+  for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i =
+      stats.begin (); i != stats.end (); ++i)
+    {
+      Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
+      std::stringstream protoStream;
+      protoStream << (uint16_t) t.protocol;
+      if (t.protocol == 6)
+        {
+          protoStream.str ("TCP");
+        }
+      if (t.protocol == 17)
+        {
+          protoStream.str ("UDP");
+        }
+      double txDuration = (i->second.timeLastTxPacket.GetSeconds ()
+          - i->second.timeFirstTxPacket.GetSeconds ());
+      outFile << "Flow " << i->first << " (" << t.sourceAddress << ":"
+          << t.sourcePort << " -> " << t.destinationAddress << ":"
+          << t.destinationPort << ") proto " << protoStream.str () << "\n";
+      outFile << "  Tx Packets: " << i->second.txPackets << "\n";
+      outFile << "  Tx Bytes:   " << i->second.txBytes << "\n";
+      outFile << "  TxOffered:  "
+          << i->second.txBytes * 8.0 / txDuration / 1000 / 1000 << " Mbps\n";
+      outFile << "  Rx Bytes:   " << i->second.rxBytes << "\n";
+      if (i->second.rxPackets > 0)
+        {
+          // Measure the duration of the flow from receiver's perspective
+          //double rxDuration = i->second.timeLastRxPacket.GetSeconds () - i->second.timeFirstTxPacket.GetSeconds ();
+          double rxDuration = (i->second.timeLastRxPacket.GetSeconds ()
+              - i->second.timeFirstRxPacket.GetSeconds ());
+
+          averageFlowThroughput += i->second.rxBytes * 8.0 / rxDuration / 1000
+              / 1000;
+          averageFlowDelay += 1000 * i->second.delaySum.GetSeconds ()
+              / i->second.rxPackets;
+
+          outFile << "  Throughput: "
+              << i->second.rxBytes * 8.0 / rxDuration / 1000 / 1000
+              << " Mbps\n";
+          outFile << "  Mean delay:  "
+              << 1000 * i->second.delaySum.GetSeconds () / i->second.rxPackets
+              << " ms\n";
+          //outFile << "  Mean upt:  " << i->second.uptSum / i->second.rxPackets / 1000/1000 << " Mbps \n";
+          outFile << "  Mean jitter:  "
+              << 1000 * i->second.jitterSum.GetSeconds () / i->second.rxPackets
+              << " ms\n";
+        }
+      else
+        {
+          outFile << "  Throughput:  0 Mbps\n";
+          outFile << "  Mean delay:  0 ms\n";
+          outFile << "  Mean jitter: 0 ms\n";
+        }
+      outFile << "  Rx Packets: " << i->second.rxPackets << "\n";
+    }
+
+  outFile << "\n\n  Mean flow throughput: "
+      << averageFlowThroughput / stats.size () << "\n";
+  outFile << "  Mean flow delay: " << averageFlowDelay / stats.size () << "\n";
+
+  outFile.close ();
+}
+
+std::string
+readNodeTrace (Ptr<Node> node, bool firstLine = false)
+{
+
+  const std::string rrcStates[] =
+    {
+        "IDLE_START",
+        "IDLE_CELL_SEARCH",
+        "IDLE_WAIT_MIB_SIB1",
+        "IDLE_WAIT_MIB",
+        "IDLE_WAIT_SIB1",
+        "IDLE_CAMPED_NORMALLY",
+        "IDLE_WAIT_SIB2",
+        "IDLE_RANDOM_ACCESS",
+        "IDLE_CONNECTING",
+        "CONNECTED_NORMALLY",
+        "CONNECTED_HANDOVER",
+        "CONNECTED_PHY_PROBLEM",
+        "CONNECTED_REESTABLISHING",
+        "NUM_STATES"
+    };
+
+  if (firstLine)
+    {
+      return "nodeId,velo_x,velo_y,pos_x,pos_y,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw";
+    }
+  std::stringstream stream;
+  stream << std::to_string (node->GetId ());
+  auto mModel = node->GetObject<MobilityModel> ();
+  stream << "," << mModel->GetVelocity ().x << "," << mModel->GetVelocity ().y;
+  stream << "," << mModel->GetPosition ().x << "," << mModel->GetPosition ().y;
+
+  Ptr<MmWaveUeNetDevice> netDevice;		// = node->GetObject<MmWaveUeNetDevice>();
+  for (uint32_t i = 0; i < node->GetNDevices (); i++)
+    {
+      auto nd = node->GetDevice (i);
+      if (nd->GetInstanceTypeId () == MmWaveUeNetDevice::GetTypeId ())
+        {
+          netDevice = DynamicCast<MmWaveUeNetDevice> (nd);
+          break;
+        }
+      std::cout << "\tNode: " << node->GetId () << ", Device " << i << ": "
+          << node->GetDevice (i)->GetInstanceTypeId () << std::endl;
+    }
+
+
+  stream << "," << std::to_string (netDevice->GetCsgId ());
+  stream << "," << std::to_string (netDevice->GetEarfcn ());
+  stream << "," << std::to_string (netDevice->GetImsi ());
+  Ptr<LteUeRrc> rrc = netDevice->GetRrc ();
+  stream << "," << std::to_string (rrc->GetState ());
+  stream << "," << rrcStates[rrc->GetState ()];
+  stream << "," << std::to_string (rrc->GetCellId ());
+  stream << "," << std::to_string (rrc->GetDlBandwidth ());
+  return stream.str ();
+
+}
+
 
 
 int
@@ -165,6 +335,10 @@ main (int argc, char *argv[])
   double sfPeriod = 100.0;
 
   std::list<Box>  m_previousBlocks;
+  std::string outputDir = "multicellStat";
+  std::string nodeTraceFile = "trace";
+  double nodeTraceInterval = 1;
+  double udpAppStartTime = 0.4; //seconds
 
   // Command line arguments
   CommandLine cmd;
@@ -391,6 +565,9 @@ main (int argc, char *argv[])
   InternetStackHelper internet;
   internet.Install (remoteHostContainer);
 
+  std::cout << "pgw: " << pgw->GetId () << std::endl;
+  std::cout << "mme: " << mme->GetId () << std::endl;
+  std::cout << "remote: " << remoteHost->GetId () << std::endl;
   // Create the Internet by connecting remoteHost to pgw. Setup routing too
   PointToPointHelper p2ph;
   p2ph.SetDeviceAttribute ("DataRate", DataRateValue (DataRate ("100Gb/s")));
@@ -401,7 +578,6 @@ main (int argc, char *argv[])
   ipv4h.SetBase ("1.0.0.0", "255.0.0.0");
   Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign (internetDevices);
   // interface 0 is localhost, 1 is the p2p device
-  Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
   Ipv4StaticRoutingHelper ipv4RoutingHelper;
   Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
   remoteHostStaticRouting->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
@@ -420,6 +596,23 @@ main (int argc, char *argv[])
   allEnbNodes.Add (lteEnbNodes);
   allEnbNodes.Add (mmWaveEnbNodes);
 
+  for (uint32_t i = 0; i < mmWaveEnbNodes.GetN(); i++)
+    {
+      std::cout << "gNb:" << i << " : " << mmWaveEnbNodes.Get (i)->GetId ()
+          << std::endl;
+    }
+  for (uint32_t i = 0; i < ueNodes.GetN (); i++)
+    {
+      std::cout << "ue:" << i << " : " << ueNodes.Get (i)->GetId ()
+          << std::endl;
+    }
+  for (uint32_t i = 0; i < lteEnbNodes.GetN (); i++)
+    {
+      std::cout << "LTE:" << i << " : " << lteEnbNodes.Get (i)->GetId ()
+          << std::endl;
+    }
+
+ 
   //Generate Buildings 
   std::vector<Ptr<Building> > buildingVector;
 
@@ -510,7 +703,12 @@ main (int argc, char *argv[])
   NetDeviceContainer mmWaveEnbDevs = mmwaveHelper->InstallEnbDevice (mmWaveEnbNodes);
   NetDeviceContainer mcUeDevs;
   mcUeDevs = mmwaveHelper->InstallMcUeDevice (ueNodes);
+  //ueDevs = mmwaveHelper->InstallUeDevice (ueNodes);
 
+  for (uint32_t j = 0; j < ueNodes.GetN (); j++)
+  {
+    std::cout <<"Number of ue Net device after "<<j<<" iter :" << ueNodes.Get(j)->GetNDevices()<<std::endl;
+  }
   // Install the IP stack on the UEs
   internet.Install (ueNodes);
   Ipv4InterfaceContainer ueIpIface;
@@ -532,51 +730,67 @@ main (int argc, char *argv[])
 
   // Install and start applications on UEs and remote host
   uint16_t dlPort = 1234;
-  uint16_t ulPort = 2000;
-  ApplicationContainer clientApps;
-  ApplicationContainer serverApps;
-  bool dl = 1;
-  bool ul = 0;
+  ApplicationContainer clientApps, serverApps;
 
-  for (uint32_t u = 0; u < ueNodes.GetN (); ++u)
+  //	ApplicationContainer clientAppsEmbb, serverAppsEmbb;
+
+  DashServerHelper dashSrHelper (dlPort);
+  serverApps.Add (dashSrHelper.Install (remoteHost));
+
+  int counter = 0;
+  DashHttpDownloadHelper dlClient (internetIpIfaces.GetAddress (1), dlPort); //Remotehost is the second node, pgw is first
+  dlClient.SetAttribute ("Size", UintegerValue (0xFFFFFF));
+  dlClient.SetAttribute ("NumberOfDownload", UintegerValue (1));
+  dlClient.SetAttribute ("OnStartCB",
+                         CallbackValue (MakeBoundCallback (onStart, &counter)));
+  dlClient.SetAttribute ("OnStopCB",
+                         CallbackValue (MakeBoundCallback (onStop, &counter)));
+  if (outputDir.empty ())
+    dlClient.SetAttribute (
+        "NodeTracePath",
+        StringValue (outputDir + "/" + nodeTraceFile));
+  dlClient.SetAttribute ("NodeTraceInterval",
+                         TimeValue (Seconds (nodeTraceInterval)));
+  dlClient.SetAttribute ("NodeTraceHelperCallBack",
+                         CallbackValue (MakeCallback (readNodeTrace)));
+
+  if (!outputDir.empty ())
+    dlClient.SetAttribute ("TracePath",
+                           StringValue (outputDir + "/SomeData"));
+  // configure here UDP traffic
+
+
+  for (uint32_t j = 0; j < ueNodes.GetN (); j++)
     {
-      if (dl)
-        {
-          UdpServerHelper dlPacketSinkHelper (dlPort);
-          dlPacketSinkHelper.SetAttribute ("PacketWindowSize", UintegerValue (256));
-          serverApps.Add (dlPacketSinkHelper.Install (ueNodes.Get (u)));
 
-          // Simulator::Schedule(MilliSeconds(20), &PrintLostUdpPackets, DynamicCast<UdpServer>(serverApps.Get(serverApps.GetN()-1)), lostFilename);
+      clientApps.Add (dlClient.Install (ueNodes.Get (j)));
+      Ptr<NetDevice> uenetDev = ueNodes.Get(j)->GetDevice(0);
+      Ptr<EpcTft> tft = Create<EpcTft> ();
+      EpcTft::PacketFilter dlpf;
+      dlpf.localPortStart = dlPort;
+      dlpf.localPortEnd = dlPort;
+      dlPort++;
+      tft->Add (dlpf);
+      //SIGSEGV error
+      // enum EpsBearer::Qci q;
 
-          UdpClientHelper dlClient (ueIpIface.GetAddress (u), dlPort);
-          dlClient.SetAttribute ("MaxPackets", UintegerValue (0xFFFFFFFF));
-          clientApps.Add (dlClient.Install (remoteHost));
-
-        }
-      if (ul)
-        {
-          ++ulPort;
-          PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), ulPort));
-          ulPacketSinkHelper.SetAttribute ("PacketWindowSize", UintegerValue (256));
-          serverApps.Add (ulPacketSinkHelper.Install (remoteHost));
-          UdpClientHelper ulClient (remoteHostAddr, ulPort);
-          ulClient.SetAttribute ("MaxPackets", UintegerValue (0xFFFFFFFF));
-          clientApps.Add (ulClient.Install (ueNodes.Get (u)));
-        }
+      // q = EpsBearer::GBR_CONV_VOICE;
+      
+      // EpsBearer bearer (q);
+      // mmwaveHelper->ActivateDataRadioBearer(mcUeDevs.Get(j), bearer);
+     
     }
-
-  // Start applications
-
-  serverApps.Start (Seconds (0.0));
-  clientApps.Start (Seconds (0.0));
-  clientApps.Stop (Seconds (simTime - 1));
+  // start UDP server and client apps
+  serverApps.Start (Seconds (udpAppStartTime));
+  clientApps.Start (Seconds (udpAppStartTime + 1));
 
   double numPrints = 10;
   for (int i = 0; i < numPrints; i++)
     {
       Simulator::Schedule (Seconds (i * simTime / numPrints), &PrintPosition, ueNodes.Get (0));
     }
-  BuildingsHelper::MakeMobilityModelConsistent ();
+  //TODO  SIGSEGV ERROR
+  // BuildingsHelper::MakeMobilityModelConsistent ();
   mmwaveHelper->EnableTraces ();
   Simulator::Stop (Seconds (simTime));
   AnimationInterface anim ("animation-two-enbs-grid-final-stats.xml");
@@ -600,6 +814,17 @@ main (int argc, char *argv[])
   anim.UpdateNodeDescription(remoteHostContainer.Get(0),"Remote Host");
 
   Simulator::Run ();
+  FlowMonitorHelper flowmonHelper;
+  NodeContainer endpointNodes;
+  endpointNodes.Add (remoteHost);
+  endpointNodes.Add (ueNodes);
+
+  Ptr<ns3::FlowMonitor> monitor = flowmonHelper.Install (endpointNodes);
+  monitor->SetAttribute ("DelayBinWidth", DoubleValue (0.001));
+  monitor->SetAttribute ("JitterBinWidth", DoubleValue (0.001));
+  monitor->SetAttribute ("PacketSizeBinWidth", DoubleValue (20));
+
+  storeFlowMonitor (monitor, flowmonHelper);
   Simulator::Destroy ();
   return 0;
 }
