@@ -636,10 +636,10 @@ main (int argc, char *argv[])
   //Generate Buildings 
   std::vector<Ptr<Building> > buildingVector;
 
-  double maxBuildingSize = 20;
+  double maxBuildingSize = 30;
   double  maxXaxis = 640, maxYaxis = 370, minxAxis = 340, minYaxis = 310;
 
-  for(uint32_t buildingindex = 0; buildingindex < 4; buildingindex++)
+  for(uint32_t buildingindex = 0; buildingindex < 8; buildingindex++)
   {
       Ptr < Building > building = Create<Building> ();
 
@@ -659,7 +659,7 @@ main (int argc, char *argv[])
       buildingVector.push_back (building);
   }
   maxXaxis = 640, maxYaxis = 720, minxAxis = 340, minYaxis = 650;
-    for(uint32_t buildingindex = 0; buildingindex < 4; buildingindex++)
+    for(uint32_t buildingindex = 0; buildingindex < 8; buildingindex++)
   {
       Ptr < Building > building = Create<Building> ();
 
@@ -677,6 +677,7 @@ main (int argc, char *argv[])
                                     0.0, buildingHeight));
       buildingVector.push_back (building);
   }
+  
 
 
   MobilityHelper gNbMobility, ueMobility, LteMobility;
@@ -771,7 +772,7 @@ main (int argc, char *argv[])
         "NodeTracePath",
         StringValue (outputDir + "/" + nodeTraceFile));
   dlClient.SetAttribute ("NodeTraceInterval",
-                         TimeValue (Seconds (nodeTraceInterval)));
+                         TimeValue (MilliSeconds (10*nodeTraceInterval)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack",
                          CallbackValue (MakeCallback (readNodeTrace)));
 
@@ -779,7 +780,11 @@ main (int argc, char *argv[])
     dlClient.SetAttribute ("TracePath",
                            StringValue (outputDir + "/SomeData"));
   // configure here UDP traffic
-
+  for (uint32_t j = 0; j < ueNodes.GetN (); j++)
+  {
+    std::cout <<"Ip Address of node "<<ueNodes.Get(j)->GetId()<<" "<<ueNodes.Get(j)->GetObject<Ipv4>()->GetAddress(1,0)<<std::endl;
+  }
+  std::cout<<"Ip Address of remoteHost "<<internetIpIfaces.GetAddress(1)<<std::endl;
 
   for (uint32_t j = 0; j < ueNodes.GetN (); j++)
     {
@@ -819,7 +824,7 @@ main (int argc, char *argv[])
 
   //BuildingsHelper::MakeMobilityModelConsistent ();
   mmwaveHelper->EnableTraces ();
-  Simulator::Stop (Seconds (simTime));
+  //Simulator::Stop (Seconds (simTime));
   AnimationInterface anim ("animation-two-enbs-grid-final-stats.xml");
   for (uint32_t i = 0; i < lteEnbNodes.GetN(); i++)
   {
@@ -839,7 +844,7 @@ main (int argc, char *argv[])
   anim.UpdateNodeDescription(pgw,"PGW");
   anim.UpdateNodeDescription(mme,"MME");
   anim.UpdateNodeDescription(remoteHostContainer.Get(0),"Remote Host");
-
+  p2ph.EnablePcapAll ("multicell-stat");
   Simulator::Run ();
   FlowMonitorHelper flowmonHelper;
   NodeContainer endpointNodes;
