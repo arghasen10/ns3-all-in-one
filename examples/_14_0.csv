@@ -1,0 +1,2 @@
+#,Time,rxSpeed,txSpeed,nodeId,velo_x,velo_y,pos_x,pos_y,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw
+0,1.4,0,0,14,-45.1726,-0.77251,683.338,49.9605,0,30309,7,9,CONNECTED_NORMALLY,1,100

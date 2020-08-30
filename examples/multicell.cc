@@ -18,7 +18,7 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
-
+#include "ns3/mmwave-module.h"
 #include "ns3/mmwave-helper.h"
 #include "ns3/epc-helper.h"
 #include "ns3/core-module.h"
@@ -298,24 +298,44 @@ readNodeTrace (Ptr<Node> node, bool firstLine = false)
   stream << "," << mModel->GetVelocity ().x << "," << mModel->GetVelocity ().y;
   stream << "," << mModel->GetPosition ().x << "," << mModel->GetPosition ().y;
 
-  Ptr<MmWaveUeNetDevice> netDevice;		// = node->GetObject<MmWaveUeNetDevice>();
+  Ptr<McUeNetDevice> netDevice; // = node->GetObject<MmWaveUeNetDevice>();
+  //Ptr<ns3::McUeNetDevice> netDevice;
   for (uint32_t i = 0; i < node->GetNDevices (); i++)
     {
-      auto nd = node->GetDevice (i);
-      if (nd->GetInstanceTypeId () == MmWaveUeNetDevice::GetTypeId ())
-        {
-          netDevice = DynamicCast<MmWaveUeNetDevice> (nd);
-          break;
-        }
       std::cout << "\tNode: " << node->GetId () << ", Device " << i << ": "
-          << node->GetDevice (i)->GetInstanceTypeId () << std::endl;
-    }
+        << node->GetDevice (i)->GetInstanceTypeId () << std::endl;
+      auto nd = node->GetDevice (i);
+      //if (nd->GetInstanceTypeId () == MmWaveUeNetDevice::GetTypeId ())
+      std::string nameofdevice = nd->GetInstanceTypeId ().GetName();
+      if (nameofdevice == "ns3::McUeNetDevice")
+      {
+        std::cout<<"true"<<std::endl;
+        //netDevice = nd;
+        netDevice = DynamicCast<McUeNetDevice> (nd);
+        // netDevice = DynamicCast<McUeNetDevice> (nd);
+        break;
+      }
+      else
+      {
+        std::cout<<"False"<<std::endl;
+      }
 
+    }
+  std::cout << "CsgId: "<<netDevice->GetCsgId () <<std::endl;
+  std::cout << "GetMmWaveEarfcn: "<<netDevice->GetMmWaveEarfcn () <<std::endl;
+  std::cout << "GetLteDlEarfcn: "<<netDevice->GetLteDlEarfcn () <<std::endl;
+  std::cout << "GetImsi: "<<netDevice->GetImsi () <<std::endl;
 
   stream << "," << std::to_string (netDevice->GetCsgId ());
-  stream << "," << std::to_string (netDevice->GetEarfcn ());
+  stream << "," << std::to_string (netDevice->GetMmWaveEarfcn ());
   stream << "," << std::to_string (netDevice->GetImsi ());
-  Ptr<LteUeRrc> rrc = netDevice->GetRrc ();
+  Ptr<LteUeRrc> rrc = netDevice->GetLteRrc ();
+
+  std::cout << "GetState: "<<rrc->GetState () <<std::endl;
+  std::cout << "rrcstate: "<<rrcStates[rrc->GetState ()] <<std::endl;
+  std::cout << "GetCellId: "<<rrc->GetCellId () <<std::endl;
+  std::cout << "GetDlBandwidth: "<<rrc->GetDlBandwidth () <<std::endl;
+
   stream << "," << std::to_string (rrc->GetState ());
   stream << "," << rrcStates[rrc->GetState ()];
   stream << "," << std::to_string (rrc->GetCellId ());
@@ -391,7 +411,7 @@ main (int argc, char *argv[])
   GlobalValue::GetValueByName ("mmeLatency", doubleValue);
   double mmeLatency = doubleValue.Get ();
 
-  double simTime = 1.1;
+  double simTime = 21.1;
   NS_LOG_UNCOND ("rlcAmEnabled " << rlcAmEnabled << " bufferSize " << bufferSize << " interPacketInterval " <<
                  interPacketInterval << " x2Latency " << x2Latency << " mmeLatency " << mmeLatency);
 
@@ -635,6 +655,7 @@ main (int argc, char *argv[])
       building->SetBoundaries (Box (box.xMin, box.xMax,
                                     box.yMin,  box.yMax,
                                     0.0, buildingHeight));
+      
       buildingVector.push_back (building);
   }
   maxXaxis = 640, maxYaxis = 720, minxAxis = 340, minYaxis = 650;
@@ -781,6 +802,7 @@ main (int argc, char *argv[])
      
     }
   // start UDP server and client apps
+  
   serverApps.Start (Seconds (udpAppStartTime));
   clientApps.Start (Seconds (udpAppStartTime + 1));
 
@@ -790,7 +812,12 @@ main (int argc, char *argv[])
       Simulator::Schedule (Seconds (i * simTime / numPrints), &PrintPosition, ueNodes.Get (0));
     }
   //TODO  SIGSEGV ERROR
-  // BuildingsHelper::MakeMobilityModelConsistent ();
+  for (size_t i = 0; i < buildingVector.size(); i++)
+  {
+    MobilityBuildingInfo (buildingVector[i]);
+  }
+
+  //BuildingsHelper::MakeMobilityModelConsistent ();
   mmwaveHelper->EnableTraces ();
   Simulator::Stop (Seconds (simTime));
   AnimationInterface anim ("animation-two-enbs-grid-final-stats.xml");
