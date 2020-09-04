@@ -60,23 +60,6 @@ NS_LOG_COMPONENT_DEFINE ("multicell");
 
 
 void
-onStart (int *count)
-{
-  std::cout << "Starting at:" << Simulator::Now () << std::endl;
-  (*count)++;
-}
-void
-onStop (int *count)
-{
-  std::cout << "Stoping at:" << Simulator::Now () << std::endl;
-  (*count)--;
-  if (!(*count))
-    {
-      Simulator::Stop ();
-    }
-}
-
-void
 PrintPosition (Ptr<Node> node)
 {
   Ptr<MobilityModel> model = node->GetObject<MobilityModel> ();
@@ -412,10 +395,149 @@ storeFlowMonitor (Ptr<ns3::FlowMonitor> monitor,
   outFile.close ();
 }
 
+void
+NotifyConnectionEstablishedUe (std::string context,
+                               uint64_t imsi,
+                               uint16_t cellid,
+                               uint16_t rnti)
+{
+  std::fstream fileout;
+  std::string filename = "handover_tcp.csv";
+  fileout.open(filename,std::ios::out | std::ios::app);
+  fileout << Simulator::Now().GetSeconds() <<",";
+  fileout << "ConnectionEstablishedUe" <<",";
+  fileout << imsi << ",";
+  fileout << cellid <<",";
+  fileout << rnti <<",";
+  fileout << "NA" << std::endl;
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " UE IMSI " << imsi
+            << ": connected to CellId " << cellid
+            << " with RNTI " << rnti
+            << std::endl;
+}
+
+void
+NotifyHandoverStartUe (std::string context,
+                       uint64_t imsi,
+                       uint16_t cellid,
+                       uint16_t rnti,
+                       uint16_t targetCellId)
+{
+  std::fstream fileout;
+  std::string filename = "handover_tcp.csv";
+  fileout.open(filename,std::ios::out | std::ios::app);
+  fileout << Simulator::Now().GetSeconds() <<",";
+  fileout << "HandoverStartUe" <<",";
+  fileout << imsi << ",";
+  fileout << cellid <<",";
+  fileout << rnti <<",";
+  fileout << targetCellId << std::endl;
+
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " UE IMSI " << imsi
+            << ": previously connected to CellId " << cellid
+            << " with RNTI " << rnti
+            << ", doing handover to CellId " << targetCellId
+            << std::endl;
+}
+
+void
+NotifyHandoverEndOkUe (std::string context,
+                       uint64_t imsi,
+                       uint16_t cellid,
+                       uint16_t rnti)
+{
+  std::fstream fileout;
+  std::string filename = "handover_tcp.csv";
+  fileout.open(filename,std::ios::out | std::ios::app);
+  fileout << Simulator::Now().GetSeconds() <<",";
+  fileout << "HandoverEndOkUe" <<",";
+  fileout << imsi << ",";
+  fileout << cellid <<",";
+  fileout << rnti <<",";
+  fileout << "NA" << std::endl;
+
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " UE IMSI " << imsi
+            << ": successful handover to CellId " << cellid
+            << " with RNTI " << rnti
+            << std::endl;
+}
+
+void
+NotifyConnectionEstablishedEnb (std::string context,
+                                uint64_t imsi,
+                                uint16_t cellid,
+                                uint16_t rnti)
+{
+  std::fstream fileout;
+  std::string filename = "handover_tcp.csv";
+  fileout.open(filename,std::ios::out | std::ios::app);
+  fileout << Simulator::Now().GetSeconds() <<",";
+  fileout << "ConnectionEstablishedEnb" <<",";
+  fileout << imsi << ",";
+  fileout << cellid <<",";
+  fileout << rnti <<",";
+  fileout << "NA" << std::endl;
+
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " eNB CellId " << cellid
+            << ": successful connection of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << std::endl;
+}
+
+void
+NotifyHandoverStartEnb (std::string context,
+                        uint64_t imsi,
+                        uint16_t cellid,
+                        uint16_t rnti,
+                        uint16_t targetCellId)
+{
+  std::fstream fileout;
+  std::string filename = "handover_tcp.csv";
+  fileout.open(filename,std::ios::out | std::ios::app);
+  fileout << Simulator::Now().GetSeconds() <<",";
+  fileout << "HandoverStartEnb" <<",";
+  fileout << imsi << ",";
+  fileout << cellid <<",";
+  fileout << rnti <<",";
+  fileout << targetCellId << std::endl;
+
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " eNB CellId " << cellid
+            << ": start handover of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << " to CellId " << targetCellId
+            << std::endl;
+}
+
+void
+NotifyHandoverEndOkEnb (std::string context,
+                        uint64_t imsi,
+                        uint16_t cellid,
+                        uint16_t rnti)
+{
+  std::fstream fileout;
+  std::string filename = "handover_tcp.csv";
+  fileout.open(filename,std::ios::out | std::ios::app);
+  fileout << Simulator::Now().GetSeconds() <<",";
+  fileout << "HandoverEndOkEnb" <<",";
+  fileout << imsi << ",";
+  fileout << cellid <<",";
+  fileout << rnti <<",";
+  fileout << "NA" << std::endl;
+
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " eNB CellId " << cellid
+            << ": completed handover of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << std::endl;
+}
 
 void printNodeTrace (Ptr<Node> node, uint32_t traceId)
 {
-  std::cout << "Trace Number " <<traceId << "Ue number " << node->GetId () << "Time " <<Simulator::Now ().GetSeconds();
   const std::string rrcStates[] =
     {
         "IDLE_START",
@@ -444,7 +566,7 @@ void printNodeTrace (Ptr<Node> node, uint32_t traceId)
     auto mModel = node->GetObject<MobilityModel> ();
     fout << "," << mModel->GetVelocity ().x << "," << mModel->GetVelocity ().y;
     fout << "," << mModel->GetPosition ().x << "," << mModel->GetPosition ().y;
-
+    std::cout << "Current Time" << Simulator::Now().GetSeconds() << "at node" << node->GetId() << "TraceId" <<traceId <<std::endl;
     Ptr<McUeNetDevice> netDevice;
 
     for (uint32_t i = 0; i < node->GetNDevices (); i++)
@@ -622,26 +744,6 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::MmWavePointToPointEpcHelper::X2LinkMtu",  UintegerValue (10000));
   Config::SetDefault ("ns3::MmWavePointToPointEpcHelper::S1uLinkDelay", TimeValue (MicroSeconds (1000)));
   Config::SetDefault ("ns3::MmWavePointToPointEpcHelper::S1apLinkDelay", TimeValue (MicroSeconds (mmeLatency)));
-  Config::SetDefault ("ns3::McStatsCalculator::MmWaveOutputFilename", StringValue                 (path + version + mmWaveOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::McStatsCalculator::LteOutputFilename", StringValue                    (path + version + lteOutName    + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::McStatsCalculator::CellIdInTimeOutputFilename", StringValue           (path + version + cellIdInTimeOutName    + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::MmWaveBearerStatsCalculator::DlRlcOutputFilename", StringValue        (path + version + dlRlcOutName   + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::MmWaveBearerStatsCalculator::UlRlcOutputFilename", StringValue        (path + version + ulRlcOutName   + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::MmWaveBearerStatsCalculator::DlPdcpOutputFilename", StringValue       (path + version + dlPdcpOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::MmWaveBearerStatsCalculator::UlPdcpOutputFilename", StringValue       (path + version + ulPdcpOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::UeHandoverStartOutputFilename", StringValue    (path + version +  ueHandoverStartOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::EnbHandoverStartOutputFilename", StringValue   (path + version + enbHandoverStartOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::UeHandoverEndOutputFilename", StringValue    (path + version +  ueHandoverEndOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::EnbHandoverEndOutputFilename", StringValue   (path + version + enbHandoverEndOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::CellIdStatsHandoverOutputFilename", StringValue (path + version + cellIdInTimeHandoverOutName + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::MmWaveBearerStatsConnector::MmWaveSinrOutputFilename", StringValue (path + version + mmWaveSinrOutputFilename + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::CoreNetworkStatsCalculator::X2FileName", StringValue                  (path + version + x2statOutputFilename    + "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  //std::string lostFilename = path + version + "LostUdpPackets" +  "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension;
-  //Config::SetDefault ("ns3::UdpServer::ReceivedPacketsFilename", StringValue(path + version + "ReceivedUdp" +  "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  //Config::SetDefault ("ns3::UdpClient::SentPacketsFilename", StringValue(path + version + "SentUdp" +  "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  //Config::SetDefault ("ns3::UdpServer::ReceivedSnFilename", StringValue(path + version + "ReceivedSn" +  "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-  Config::SetDefault ("ns3::LteRlcAm::BufferSizeFilename", StringValue (path + version + "RlcAmBufferSize" +  "_" + seedSetStr + "_" + runSetStr + "_" + time_str + extension));
-
   Config::SetDefault ("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue (bufferSize * 1024 * 1024));
   Config::SetDefault ("ns3::LteRlcUmLowLat::MaxTxBufferSize", UintegerValue (bufferSize * 1024 * 1024));
   Config::SetDefault ("ns3::LteRlcAm::StatusProhibitTimer", TimeValue (MilliSeconds (10.0)));
@@ -896,15 +998,20 @@ main (int argc, char *argv[])
   for (uint32_t j = 0; j < ueNodes.GetN (); j++)
    {
      std::fstream fout;
-     std::stringstream filename;
+     std::stringstream filename ;
      filename << "multicelltcp";
      filename << ueNodes.Get(j)->GetId ();
-     filename <<".csv";
+     filename << ".csv";
      fout.open(filename.str(),std::ios::out | std::ios::app);
      fout<<"#,Time,nodeId,velo_x,velo_y,pos_x,pos_y,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw";
      fout<<"\n";
    }
-
+  //Handover store in file
+  std::fstream fileout;
+  std::string handoverfilename = "handover_tcp.csv";
+  fileout.open(handoverfilename,std::ios::out | std::ios::app);
+  fileout << "Time,Event,IMSI,CellId,RNTI,TargetCellId";
+  fileout << std::endl; 
   uint16_t dlPort = 1234;
   ApplicationContainer clientApps, serverApps;
 
@@ -973,6 +1080,19 @@ main (int argc, char *argv[])
 
   //BuildingsHelper::MakeMobilityModelConsistent ();
   mmwaveHelper->EnableTraces ();
+    // connect custom trace sinks for RRC connection establishment and handover notification
+  Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/ConnectionEstablished",
+                   MakeCallback (&NotifyConnectionEstablishedEnb));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/ConnectionEstablished",
+                   MakeCallback (&NotifyConnectionEstablishedUe));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverStart",
+                   MakeCallback (&NotifyHandoverStartEnb));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/HandoverStart",
+                   MakeCallback (&NotifyHandoverStartUe));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverEndOk",
+                   MakeCallback (&NotifyHandoverEndOkEnb));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/HandoverEndOk",
+                   MakeCallback (&NotifyHandoverEndOkUe));
   Simulator::Stop (Seconds (simTime));
   AnimationInterface anim ("animation-two-enbs-grid-final-stats.xml");
   for (uint32_t i = 0; i < lteEnbNodes.GetN(); i++)
