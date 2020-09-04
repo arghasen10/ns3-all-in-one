@@ -415,6 +415,7 @@ storeFlowMonitor (Ptr<ns3::FlowMonitor> monitor,
 
 void printNodeTrace (Ptr<Node> node, uint32_t traceId)
 {
+  std::cout << "Trace Number " <<traceId << "Ue number " << node->GetId () << "Time " <<Simulator::Now ().GetSeconds();
   const std::string rrcStates[] =
     {
         "IDLE_START",
@@ -436,6 +437,7 @@ void printNodeTrace (Ptr<Node> node, uint32_t traceId)
     std::stringstream filename;
     filename << "multicelltcp";
     filename << node->GetId ();
+    filename << ".csv";
     fout.open(filename.str(),std::ios::out | std::ios::app);
     fout <<traceId << "," << Simulator::Now().GetSeconds();
     fout << "," << std::to_string (node->GetId ());
@@ -897,6 +899,7 @@ main (int argc, char *argv[])
      std::stringstream filename;
      filename << "multicelltcp";
      filename << ueNodes.Get(j)->GetId ();
+     filename <<".csv";
      fout.open(filename.str(),std::ios::out | std::ios::app);
      fout<<"#,Time,nodeId,velo_x,velo_y,pos_x,pos_y,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw";
      fout<<"\n";
@@ -954,7 +957,7 @@ main (int argc, char *argv[])
 
   double numPrintsTrace = 1000;
   uint32_t traceId = 1;
-  for (int i = 0; i < numPrints; i++)
+  for (int i = 0; i < numPrintsTrace; i++)
     {
       for(uint32_t j=0; j<ueNodes.GetN (); j++)
       {
@@ -970,7 +973,7 @@ main (int argc, char *argv[])
 
   //BuildingsHelper::MakeMobilityModelConsistent ();
   mmwaveHelper->EnableTraces ();
-  //Simulator::Stop (Seconds (simTime));
+  Simulator::Stop (Seconds (simTime));
   AnimationInterface anim ("animation-two-enbs-grid-final-stats.xml");
   for (uint32_t i = 0; i < lteEnbNodes.GetN(); i++)
   {
@@ -990,7 +993,7 @@ main (int argc, char *argv[])
   anim.UpdateNodeDescription(pgw,"PGW");
   anim.UpdateNodeDescription(mme,"MME");
   anim.UpdateNodeDescription(remoteHostContainer.Get(0),"Remote Host");
-  p2ph.EnablePcapAll ("multicell-stat");
+  p2ph.EnablePcapAll ("multicell-stat-tcp");
   
   Simulator::Run ();
   FlowMonitorHelper flowmonHelper;
