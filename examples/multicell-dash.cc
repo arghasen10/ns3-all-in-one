@@ -18,7 +18,6 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "ns3/mmwave-module.h"
 #include "ns3/mmwave-helper.h"
 #include "ns3/epc-helper.h"
 #include "ns3/core-module.h"
@@ -41,7 +40,6 @@
 #include "ns3/log.h"
 #include "ns3/internet-apps-module.h"
 #include "ns3/dash-helper.h"
-
 #include <iostream>
 #include <ctime>
 #include <stdlib.h>
@@ -426,7 +424,7 @@ storeFlowMonitor (Ptr<ns3::FlowMonitor> monitor,
   double averageFlowDelay = 0.0;
 
   std::ofstream outFile;
-  std::string filename = "multicellStat/default";
+  std::string filename = "multicellStat2/default";
   outFile.open (filename.c_str (), std::ofstream::out | std::ofstream::trunc);
   if (!outFile.is_open ())
     {
@@ -503,8 +501,8 @@ std::string
 readNodeTrace (NodeContainer *gnbNodes, Ptr<Node> node, bool firstLine = false)
 {
 
-  const std::string rrcStates[] =
-  {
+const std::string rrcStates[] =
+{
     "IDLE_START",
     "IDLE_CELL_SEARCH",
     "IDLE_WAIT_MIB_SIB1",
@@ -519,78 +517,79 @@ readNodeTrace (NodeContainer *gnbNodes, Ptr<Node> node, bool firstLine = false)
     "CONNECTED_PHY_PROBLEM",
     "CONNECTED_REESTABLISHING",
     "NUM_STATES"
-  };
+};
 
-  if (firstLine)
-  {
+if (firstLine)
+{
     return "nodeId,velo_x,velo_y,pos_x,pos_y,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw";
-  }
-  std::stringstream stream;
-  stream << std::to_string (node->GetId ());
-  auto mModel = node->GetObject<MobilityModel> ();
-  stream << "," << mModel->GetVelocity ().x << "," << mModel->GetVelocity ().y;
-  stream << "," << mModel->GetPosition ().x << "," << mModel->GetPosition ().y;
+}
+std::stringstream stream;
+stream << std::to_string (node->GetId ());
+auto mModel = node->GetObject<MobilityModel> ();
+stream << "," << mModel->GetVelocity ().x << "," << mModel->GetVelocity ().y;
+stream << "," << mModel->GetPosition ().x << "," << mModel->GetPosition ().y;
 
-  Ptr<McUeNetDevice> netDevice; // = node->GetObject<MmWaveUeNetDevice>();
-  //Ptr<ns3::McUeNetDevice> netDevice;
-  for (uint32_t i = 0; i < node->GetNDevices (); i++)
-  {
+Ptr<McUeNetDevice> netDevice; // = node->GetObject<MmWaveUeNetDevice>();
+//Ptr<ns3::McUeNetDevice> netDevice;
+for (uint32_t i = 0; i < node->GetNDevices (); i++)
+{
     std::cout << "\tNode: " << node->GetId () << ", Device " << i << ": "
-      << node->GetDevice (i)->GetInstanceTypeId () << std::endl;
+    << node->GetDevice (i)->GetInstanceTypeId () << std::endl;
     auto nd = node->GetDevice (i);
     //if (nd->GetInstanceTypeId () == MmWaveUeNetDevice::GetTypeId ())
     std::string nameofdevice = nd->GetInstanceTypeId ().GetName();
     if (nameofdevice == "ns3::McUeNetDevice")
     {
-      netDevice = DynamicCast<McUeNetDevice> (nd);
-      break;
+    netDevice = DynamicCast<McUeNetDevice> (nd);
+    break;
     }
 
-  }
-  std::cout << "Channel Id" << netDevice->GetChannel()->GetId() << std::endl;
-  std::cout << "Channel Id" << netDevice->GetChannel()->GetNDevices() << std::endl;
-  
-  std::cout << "Mmwave Frequency"
-  std::cout << "CsgId: "<<netDevice->GetCsgId () <<std::endl;
-  std::cout << "GetMmWaveEarfcn: "<<netDevice->GetMmWaveEarfcn () <<std::endl;
-  std::cout << "GetLteDlEarfcn: "<<netDevice->GetLteDlEarfcn () <<std::endl;
-  std::cout << "GetImsi: "<<netDevice->GetImsi () <<std::endl;
-  
-  stream << "," << std::to_string (netDevice->GetChannel ()->GetId());
-  stream << "," << std::to_string (netDevice->GetChannel ()->GetNDevices());
-  Ptr<MmWaveUePhy> phy = netDevice->GetMmWavePhy ();
+}
+std::cout << "Channel Id" << netDevice->GetChannel()->GetId() << std::endl;
+std::cout << "Channel Id" << netDevice->GetChannel()->GetNDevices() << std::endl;
 
-  std::cout << "Channel Number " << phy->GetChannelNumber ();
-  std::cout << "Rx Gain" << std::to_string(phy->GetRxGain ());
-  std::cout << "Rx Sensitivity" << std::to_string(phy->GetRxSensitivity ());
-  stream << "Link Up check" << std::to_string(netDevice->IsLinkUp());
+std::cout << "Mmwave Frequency"
+std::cout << "CsgId: "<<netDevice->GetCsgId () <<std::endl;
+std::cout << "GetMmWaveEarfcn: "<<netDevice->GetMmWaveEarfcn () <<std::endl;
+std::cout << "GetLteDlEarfcn: "<<netDevice->GetLteDlEarfcn () <<std::endl;
+std::cout << "GetImsi: "<<netDevice->GetImsi () <<std::endl;
 
+stream << "," << std::to_string (netDevice->GetChannel ()->GetId());
+stream << "," << std::to_string (netDevice->GetChannel ()->GetNDevices());
+Ptr<MmWaveUePhy> phy = netDevice->GetMmWavePhy ();
 
-  stream << "," << std::to_string (netDevice->GetCsgId ());
-  stream << "," << std::to_string (netDevice->GetMmWaveEarfcn ());
-  stream << "," << std::to_string (netDevice->GetImsi ());
-  Ptr<LteUeRrc> rrc = netDevice->GetMmWaveRrc ();
-
-  std::cout << "GetState: "<<rrc->GetState () <<std::endl;
-  std::cout << "rrcstate: "<<rrcStates[rrc->GetState ()] <<std::endl;
-  std::cout << "GetCellId: "<<rrc->GetCellId () <<std::endl;
-  std::cout << "GetDlBandwidth: "<<rrc->GetDlBandwidth () <<std::endl;
-
-  stream << "," << std::to_string (rrc->GetState ());
-  stream << "," << rrcStates[rrc->GetState ()];
-  stream << "," << std::to_string (rrc->GetCellId ());
-  stream << "," << std::to_string (rrc->GetDlBandwidth ());
+std::cout << "Channel Number " << phy->GetChannelNumber ();
+std::cout << "Rx Gain" << std::to_string(phy->GetRxGain ());
+std::cout << "Rx Sensitivity" << std::to_string(phy->GetRxSensitivity ());
+stream << "Link Up check" << std::to_string(netDevice->IsLinkUp());
 
 
-  for(uint32_t i = 0; i < gnbNodes->GetN(); i++)
+stream << "," << std::to_string (netDevice->GetCsgId ());
+stream << "," << std::to_string (netDevice->GetMmWaveEarfcn ());
+stream << "," << std::to_string (netDevice->GetImsi ());
+Ptr<LteUeRrc> rrc = netDevice->GetMmWaveRrc ();
+
+std::cout << "GetState: "<<rrc->GetState () <<std::endl;
+std::cout << "rrcstate: "<<rrcStates[rrc->GetState ()] <<std::endl;
+std::cout << "GetCellId: "<<rrc->GetCellId () <<std::endl;
+std::cout << "GetDlBandwidth: "<<rrc->GetDlBandwidth () <<std::endl;
+
+stream << "," << std::to_string (rrc->GetState ());
+stream << "," << rrcStates[rrc->GetState ()];
+stream << "," << std::to_string (rrc->GetCellId ());
+stream << "," << std::to_string (rrc->GetDlBandwidth ());
+
+
+for(uint32_t i = 0; i < gnbNodes->GetN(); i++)
     {
-      auto ap = apNodes->Get(i);
-      auto apModel = ap->GetObject<MobilityModel> ();
+    auto ap = apNodes->Get(i);
+    auto apModel = ap->GetObject<MobilityModel> ();
 //      auto appos = apModel->GetPosition();
-      stream << "," << mModel->GetDistanceFrom(apModel);
+    stream << "," << mModel->GetDistanceFrom(apModel);
     }
 
-  return stream.str ();
+return stream.str ();
+  
 
 }
 
@@ -605,7 +604,7 @@ main (int argc, char *argv[])
   double sfPeriod = 100.0;
 
   std::list<Box>  m_previousBlocks;
-  std::string outputDir = "multicellStat";
+  std::string outputDir = "multicellStat2";
   std::string nodeTraceFile = "trace";
   double nodeTraceInterval = 1;
   double udpAppStartTime = 0.4; //seconds
@@ -996,7 +995,7 @@ main (int argc, char *argv[])
                          CallbackValue (MakeBoundCallback (onStop, &counter)));
   
   dlClient.SetAttribute ("NodeTracePath", StringValue (outputDir + "/" + nodeTraceFile));
-  dlClient.SetAttribute ("NodeTraceInterval", TimeValue (MilliSeconds (10*nodeTraceInterval)));
+  dlClient.SetAttribute ("NodeTraceInterval", TimeValue (Seconds (nodeTraceInterval)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeCallback (readNodeTrace)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeBoundCallback (readNodeTrace, &mmWaveEnbNodes)));
   dlClient.SetAttribute ("TracePath", StringValue (outputDir + "/TraceData"));
@@ -1015,18 +1014,21 @@ main (int argc, char *argv[])
     std::cout <<"Ip Address of node "<<ueNodes.Get(j)->GetId()<<" "<<ueNodes.Get(j)->GetObject<Ipv4>()->GetAddress(1,0)<<std::endl;
   }
   std::cout<<"Ip Address of remoteHost "<<internetIpIfaces.GetAddress(1)<<std::endl;
-
+  
   for (uint32_t j = 0; j < ueNodes.GetN (); j++)
     {
 
-      clientApps.Add (dlClient.Install (ueNodes.Get (j)));
-      Ptr<NetDevice> uenetDev = ueNodes.Get(j)->GetDevice(0);
-      Ptr<EpcTft> tft = Create<EpcTft> ();
-      EpcTft::PacketFilter dlpf;
-      dlpf.localPortStart = dlPort;
-      dlpf.localPortEnd = dlPort;
-      dlPort++;
-      tft->Add (dlpf);
+      if(j==8)
+      {
+        clientApps.Add (dlClient.Install (ueNodes.Get (j)));
+        Ptr<NetDevice> uenetDev = ueNodes.Get(j)->GetDevice(0);
+        Ptr<EpcTft> tft = Create<EpcTft> ();
+        EpcTft::PacketFilter dlpf;
+        dlpf.localPortStart = dlPort;
+        dlpf.localPortEnd = dlPort;
+        dlPort++;
+        tft->Add (dlpf);
+      }
       //SIGSEGV error
       // enum EpsBearer::Qci q;
 
