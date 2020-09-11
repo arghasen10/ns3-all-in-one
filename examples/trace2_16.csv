@@ -1,4 +1,4 @@
-#,Time,rxSpeed,txSpeed,nodeId,velo_x,velo_y,pos_x,pos_y,IsLinkUp,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw
+#,Time,rxSpeed,txSpeed,nodeId,velo_x,velo_y,pos_x,pos_y,IsLinkUp,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw,dist1,dist2,dist3,dist4
 0,0.9,0,0,16,-14.4502,-22.7403,535.633,428.131,32,0,30309,9,9,CONNECTED_NORMALLY,3,4,224.014,161.609,312.593,271.385
 1,1.9,28432,6224,16,24.1892,35.7458,536.239,424.485,32,0,30309,9,9,CONNECTED_NORMALLY,5,4,223.042,158.996,315.766,274.299
 2,2.9,4.58879e+06,205936,16,5.81331,25.8729,531.465,422.895,32,0,30309,9,9,CONNECTED_NORMALLY,5,4,218.041,162.028,313.944,277.978
