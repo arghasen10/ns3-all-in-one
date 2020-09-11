@@ -183,7 +183,7 @@ NotifyConnectionEstablishedUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash.csv";
+    std::string filename = "handover_dash2.csv";
     fileout.open(filename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "ConnectionEstablishedUe" <<",";
@@ -209,7 +209,7 @@ NotifyHandoverStartUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash.csv";
+    std::string filename = "handover_dash2.csv";
     fileout.open(filename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverStartUe" <<",";
@@ -238,7 +238,7 @@ NotifyHandoverEndOkUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash.csv";
+    std::string filename = "handover_dash2.csv";
     fileout.open(filename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverEndOkUe" <<",";
@@ -265,7 +265,7 @@ NotifyConnectionEstablishedEnb (std::string context,
   if (imsi==9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash.csv";
+    std::string filename = "handover_dash2.csv";
     fileout.open(filename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "ConnectionEstablishedEnb" <<",";
@@ -294,7 +294,7 @@ NotifyHandoverStartEnb (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash.csv";
+    std::string filename = "handover_dash2.csv";
     fileout.open(filename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverStartEnb" <<",";
@@ -321,7 +321,7 @@ NotifyHandoverEndOkEnb (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash.csv";
+    std::string filename = "handover_dash2.csv";
     fileout.open(filename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverEndOkEnb" <<",";
@@ -337,76 +337,6 @@ NotifyHandoverEndOkEnb (std::string context,
               << std::endl;
   }
 
-}
-
-void printNodeTrace (Ptr<Node> node, uint32_t traceId)
-{
-  const std::string rrcStates[] =
-  {
-      "IDLE_START",
-      "IDLE_CELL_SEARCH",
-      "IDLE_WAIT_MIB_SIB1",
-      "IDLE_WAIT_MIB",
-      "IDLE_WAIT_SIB1",
-      "IDLE_CAMPED_NORMALLY",
-      "IDLE_WAIT_SIB2",
-      "IDLE_RANDOM_ACCESS",
-      "IDLE_CONNECTING",
-      "CONNECTED_NORMALLY",
-      "CONNECTED_HANDOVER",
-      "CONNECTED_PHY_PROBLEM",
-      "CONNECTED_REESTABLISHING",
-      "NUM_STATES"
-  };
-  std::fstream fout;
-  std::string filename = "multicelldash16.csv";
-  fout.open(filename,std::ios::out | std::ios::app);
-  fout <<traceId << "," << Simulator::Now().GetSeconds();
-  fout << "," << std::to_string (node->GetId ());
-  auto mModel = node->GetObject<MobilityModel> ();
-  fout << "," << mModel->GetVelocity ().x << "," << mModel->GetVelocity ().y;
-  fout << "," << mModel->GetPosition ().x << "," << mModel->GetPosition ().y;
-  std::cout << "Current Time" << Simulator::Now().GetSeconds() << "at node" << node->GetId() << "TraceId" <<traceId <<std::endl;
-  Ptr<McUeNetDevice> netDevice;
-
-  for (uint32_t i = 0; i < node->GetNDevices (); i++)
-  {
-    std::cout << "\tNode: " << node->GetId () << ", Device " << i << ": "
-      << node->GetDevice (i)->GetInstanceTypeId () << std::endl;
-    auto nd = node->GetDevice (i);
-    std::string nameofdevice = nd->GetInstanceTypeId ().GetName();
-    if (nameofdevice == "ns3::McUeNetDevice")
-    {
-      std::cout<<"true"<<std::endl;
-      netDevice = DynamicCast<McUeNetDevice> (nd);
-      break;
-    }
-    else
-    {
-      std::cout<<"False"<<std::endl;
-    }
-
-  }
-  std::cout << "CsgId: "<<netDevice->GetCsgId () <<std::endl;
-  std::cout << "GetMmWaveEarfcn: "<<netDevice->GetMmWaveEarfcn () <<std::endl;
-  std::cout << "GetLteDlEarfcn: "<<netDevice->GetLteDlEarfcn () <<std::endl;
-  std::cout << "GetImsi: "<<netDevice->GetImsi () <<std::endl;
-
-  fout << "," << std::to_string (netDevice->GetCsgId ());
-  fout << "," << std::to_string (netDevice->GetMmWaveEarfcn ());
-  fout << "," << std::to_string (netDevice->GetImsi ());
-  Ptr<LteUeRrc> rrc = netDevice->GetMmWaveRrc ();
-
-  std::cout << "GetState: "<<rrc->GetState () <<std::endl;
-  std::cout << "rrcstate: "<<rrcStates[rrc->GetState ()] <<std::endl;
-  std::cout << "GetCellId: "<<rrc->GetCellId () <<std::endl;
-  std::cout << "GetDlBandwidth: "<<rrc->GetDlBandwidth () <<std::endl;
-
-  fout << "," << std::to_string (rrc->GetState ());
-  fout << "," << rrcStates[rrc->GetState ()];
-  fout << "," << std::to_string (rrc->GetCellId ());
-  fout << "," << std::to_string (rrc->GetDlBandwidth ());
-  fout<<std::endl;
 }
 
 
@@ -521,7 +451,7 @@ const std::string rrcStates[] =
 
 if (firstLine)
 {
-    return "nodeId,velo_x,velo_y,pos_x,pos_y,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw";
+    return "nodeId,velo_x,velo_y,pos_x,pos_y,IsLinkUp,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw";
 }
 std::stringstream stream;
 stream << std::to_string (node->GetId ());
@@ -545,23 +475,20 @@ for (uint32_t i = 0; i < node->GetNDevices (); i++)
     }
 
 }
-std::cout << "Channel Id" << netDevice->GetChannel()->GetId() << std::endl;
-std::cout << "Channel Id" << netDevice->GetChannel()->GetNDevices() << std::endl;
+// std::cout << "Channel Id" << netDevice->GetChannel()->GetId() << std::endl;
+// std::cout << "Channel Id" << netDevice->GetChannel()->GetNDevices() << std::endl;
 
-std::cout << "Mmwave Frequency"
+std::cout << "Mmwave Frequency";
 std::cout << "CsgId: "<<netDevice->GetCsgId () <<std::endl;
 std::cout << "GetMmWaveEarfcn: "<<netDevice->GetMmWaveEarfcn () <<std::endl;
 std::cout << "GetLteDlEarfcn: "<<netDevice->GetLteDlEarfcn () <<std::endl;
 std::cout << "GetImsi: "<<netDevice->GetImsi () <<std::endl;
 
-stream << "," << std::to_string (netDevice->GetChannel ()->GetId());
-stream << "," << std::to_string (netDevice->GetChannel ()->GetNDevices());
+// stream << "," << std::to_string (netDevice->GetChannel ()->GetId());
+// stream << "," << std::to_string (netDevice->GetChannel ()->GetNDevices());
 Ptr<MmWaveUePhy> phy = netDevice->GetMmWavePhy ();
 
-std::cout << "Channel Number " << phy->GetChannelNumber ();
-std::cout << "Rx Gain" << std::to_string(phy->GetRxGain ());
-std::cout << "Rx Sensitivity" << std::to_string(phy->GetRxSensitivity ());
-stream << "Link Up check" << std::to_string(netDevice->IsLinkUp());
+stream << "," << std::to_string(netDevice->IsLinkUp());
 
 
 stream << "," << std::to_string (netDevice->GetCsgId ());
@@ -582,7 +509,7 @@ stream << "," << std::to_string (rrc->GetDlBandwidth ());
 
 for(uint32_t i = 0; i < gnbNodes->GetN(); i++)
     {
-    auto ap = apNodes->Get(i);
+    auto ap = gnbNodes->Get(i);
     auto apModel = ap->GetObject<MobilityModel> ();
 //      auto appos = apModel->GetPosition();
     stream << "," << mModel->GetDistanceFrom(apModel);
@@ -972,7 +899,7 @@ main (int argc, char *argv[])
    }
   //Handover store in file
   std::fstream fileout;
-  std::string handoverfilename = "handover_dash.csv";
+  std::string handoverfilename = "handover_dash2.csv";
   fileout.open(handoverfilename,std::ios::out | std::ios::trunc);
   fileout << "Time,Event,IMSI,CellId,RNTI,TargetCellId";
   fileout << std::endl; 
@@ -1041,20 +968,12 @@ main (int argc, char *argv[])
   // start UDP server and client apps
   
   serverApps.Start (Seconds (udpAppStartTime));
-  clientApps.Start (Seconds (udpAppStartTime + 1));
+  clientApps.Start (Seconds (udpAppStartTime + 0.5));
 
   double numPrints = 10;
   for (int i = 0; i < numPrints; i++)
     {
       Simulator::Schedule (Seconds (i * simTime / numPrints), &PrintPosition, ueNodes.Get (0));
-    }
-
-  double numPrintsTrace = 1000;
-  uint32_t traceId = 1;
-  for (int i = 0; i < numPrintsTrace; i++)
-    {
-      Simulator::Schedule (Seconds (i * simTime / numPrintsTrace), &printNodeTrace, ueNodes.Get (8), traceId);
-      traceId++;
     }
   //TODO  SIGSEGV ERROR
   for (size_t i = 0; i < buildingVector.size(); i++)
@@ -1097,7 +1016,7 @@ main (int argc, char *argv[])
   anim.UpdateNodeDescription(pgw,"PGW");
   anim.UpdateNodeDescription(mme,"MME");
   anim.UpdateNodeDescription(remoteHostContainer.Get(0),"Remote Host");
-  p2ph.EnablePcapAll ("multicell-stat-dash");
+  p2ph.EnablePcapAll ("multicell-stat-dash2");
   Simulator::Run ();
   FlowMonitorHelper flowmonHelper;
   NodeContainer endpointNodes;
