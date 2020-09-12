@@ -44,6 +44,9 @@
 #include <ctime>
 #include <stdlib.h>
 #include <list>
+#include <random>
+#include <chrono>
+#include <cmath>
 
 
 using namespace ns3;
@@ -99,6 +102,50 @@ OverlapWithAnyPrevious (Box box, std::list<Box> m_previousBlocks)
         }
     }
   return false;
+}
+
+
+void deployEnb(int deploypoints[][2])
+{
+
+    unsigned seed1 = std::chrono::system_clock::now().time_since_epoch().count();
+    std::default_random_engine generator(seed1);
+    std::uniform_int_distribution<int> distribution(1,1000);
+
+    int x = distribution(generator);
+    int y = distribution(generator);
+    std::cout << "1 Point X: " << x <<"\tY: " << y <<std::endl;
+    deploypoints[0][0] = x;
+    deploypoints[0][1] = y;
+    int numofgNb = 1;
+    int intergNbgap = 100;
+    int numofAttempts = 0;
+    while(numofgNb < 10){
+        numofAttempts++;
+        int thisx = distribution(generator);
+        int thisy = distribution(generator);
+        bool overlapping = false;
+        for(int j=0;j<numofgNb;j++)
+        {
+            double distance = sqrt((pow((thisx-deploypoints[j][0]),2)+pow((thisy-deploypoints[j][1]),2)));
+
+            if((distance<2*intergNbgap) || (thisx<150) || (thisy < 150) || (thisx > 850) || (thisy > 850)){
+                //overlapping gNbs
+                overlapping = true;
+                break;
+            }
+        }
+        if(!overlapping){
+            deploypoints[numofgNb][0] = thisx;
+            deploypoints[numofgNb][1] = thisy;
+            numofgNb++;
+            std::cout << numofgNb << " Point X: " << deploypoints[numofgNb-1][0] <<"\tY: " << deploypoints[numofgNb-1][1] <<std::endl;
+        }
+        if(numofAttempts>10000){
+            break;
+        }
+    }
+    std::cout << "Number of Attempts Made\t" << numofAttempts << std::endl;
 }
 
 
@@ -836,7 +883,13 @@ main (int argc, char *argv[])
     "Speed", StringValue("ns3::UniformRandomVariable[Min=20|Max=50]"));
   ueMobility.Install (ueNodes);
   BuildingsHelper::Install(ueNodes);
-
+  
+  int p[10][2] = {};
+  deployEnb(p);
+  for(int i = 0; i < 10; i++)
+   {
+       std::cout << "Point X: " << p[i][0] << "\tY:" << p[i][1] << std::endl;
+   }
   apPositionAlloc->Add (Vector (333.0, 333.0,gNbHeight));
   apPositionAlloc->Add (Vector (666.0, 333.0, gNbHeight));
   apPositionAlloc->Add(Vector (333.0, 666.0, gNbHeight));
