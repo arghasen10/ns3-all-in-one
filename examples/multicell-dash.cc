@@ -498,7 +498,7 @@ const std::string rrcStates[] =
 
 if (firstLine)
 {
-    return "nodeId,velo_x,velo_y,pos_x,pos_y,IsLinkUp,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw";
+    return "nodeId,velo_x,velo_y,pos_x,pos_y,IsLinkUp,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw,dist1,dist2,dist3,dist4,dist5,dist6,dist7,dist8,dist9,dist10";
 }
 std::stringstream stream;
 stream << std::to_string (node->GetId ());
@@ -786,7 +786,7 @@ main (int argc, char *argv[])
 
   // create LTE, mmWave eNB nodes and UE node
   double gNbHeight = 10;
-  uint16_t gNbNum = 4;
+  uint16_t gNbNum = 10;
   uint16_t ueNum = 10;
   NodeContainer ueNodes;
   NodeContainer mmWaveEnbNodes;
@@ -886,14 +886,10 @@ main (int argc, char *argv[])
   
   int p[10][2] = {};
   deployEnb(p);
-  for(int i = 0; i < 10; i++)
+  for(int i = 0; i < gNbNum; i++)
    {
-       std::cout << "Point X: " << p[i][0] << "\tY:" << p[i][1] << std::endl;
+       apPositionAlloc->Add (Vector (p[i][0],p[i][1],gNbHeight));
    }
-  apPositionAlloc->Add (Vector (333.0, 333.0,gNbHeight));
-  apPositionAlloc->Add (Vector (666.0, 333.0, gNbHeight));
-  apPositionAlloc->Add(Vector (333.0, 666.0, gNbHeight));
-  apPositionAlloc->Add(Vector (666.0,666.0,gNbHeight));
 
   LteMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   ltepositionAloc->Add(Vector(500.0, 500, 10.0));
@@ -938,19 +934,7 @@ main (int argc, char *argv[])
   // Manual attachment
   mmwaveHelper->AttachToClosestEnb (mcUeDevs, mmWaveEnbDevs, lteEnbDevs);
 
-  for (uint32_t j = 0; j < ueNodes.GetN (); j++)
-   {
-     if (ueNodes.Get(j)->GetId () == 16)
-     {
-      std::fstream fout;
-      std::string filename = "multicelldash16.csv";
-      fout.open(filename,std::ios::out | std::ios::trunc);
-      fout<<"#,Time,nodeId,velo_x,velo_y,pos_x,pos_y,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw";
-      fout<<"\n";
-     }
-
-   }
-  //Handover store in file
+   //Handover store in file
   std::fstream fileout;
   std::string handoverfilename = "handover_dash2.csv";
   fileout.open(handoverfilename,std::ios::out | std::ios::trunc);
