@@ -236,3 +236,11 @@ Time,Event,IMSI,CellId,RNTI,TargetCellId
 114.129,HandoverEndOkEnb,9,10,102,NA
 114.355,HandoverStartEnb,9,10,102,8
 114.356,HandoverEndOkEnb,9,8,76,NA
+121.488,HandoverStartEnb,9,8,76,4
+121.489,HandoverEndOkEnb,9,4,89,NA
+125.453,HandoverStartEnb,9,4,89,10
+125.454,HandoverEndOkEnb,9,10,109,NA
+125.668,HandoverStartEnb,9,10,109,4
+125.67,HandoverEndOkEnb,9,4,91,NA
+125.853,HandoverStartEnb,9,4,91,8
+125.854,HandoverEndOkEnb,9,8,89,NA
