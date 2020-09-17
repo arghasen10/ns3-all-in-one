@@ -73,6 +73,8 @@ onStop (int *count)
   (*count)--;
   if (!(*count))
     {
+      auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+      std::cout << "Simulation stopped at: " << ctime(&timenow) << std::endl;
       Simulator::Stop ();
     }
 }
@@ -578,7 +580,7 @@ main (int argc, char *argv[])
   double sfPeriod = 100.0;
 
   std::list<Box>  m_previousBlocks;
-  std::string outputDir = "multicellStat2";
+  std::string outputDir = "multicelldashStat";
   std::string nodeTraceFile = "trace";
   double nodeTraceInterval = 1;
   double udpAppStartTime = 0.4; //seconds
@@ -1054,7 +1056,7 @@ main (int argc, char *argv[])
   anim.UpdateNodeDescription(mme,"MME");
   anim.UpdateNodeDescription(remoteHostContainer.Get(0),"Remote Host");
   p2ph.EnablePcapAll ("multicell-stat-dash-file-downloader");
-  auto timenow = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
+  auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   std::cout << "Simulation started at: " << ctime(&timenow) << std::endl; 
   Simulator::Run ();
   FlowMonitorHelper flowmonHelper;
