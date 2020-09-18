@@ -75,6 +75,11 @@ onStop (int *count)
     {
       auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
       std::cout << "Simulation stopped at: " << ctime(&timenow) << std::endl;
+      std::fstream simtimefile;
+      std::string simfilename = "simulation_time.csv";
+      simtimefile.open(simfilename,std::ios::out | std::ios::app);
+      simtimefile << "Stop," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
+
       Simulator::Stop ();
     }
 }
@@ -953,7 +958,7 @@ main (int argc, char *argv[])
 
   int counter = 0;
   DashHttpDownloadHelper dlClient (internetIpIfaces.GetAddress (1), dlPort); //Remotehost is the second node, pgw is first
-  dlClient.SetAttribute ("Size", UintegerValue (40000000));
+  dlClient.SetAttribute ("Size", UintegerValue (0x40000000));
   dlClient.SetAttribute ("NumberOfDownload", UintegerValue (1));
   dlClient.SetAttribute ("OnStartCB",
                          CallbackValue (MakeBoundCallback (onStart, &counter)));
@@ -1058,6 +1063,12 @@ main (int argc, char *argv[])
   p2ph.EnablePcapAll ("multicell-stat-dash-file-downloader");
   auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   std::cout << "Simulation started at: " << ctime(&timenow) << std::endl; 
+  std::fstream simtimefile;
+  std::string simfilename = "simulation_time.csv";
+  simtimefile.open(simfilename,std::ios::out | std::ios::trunc);
+  simtimefile << "Type,Simulation Time,RealTime" << std::endl;
+  simtimefile << "Start," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
+
   Simulator::Run ();
   FlowMonitorHelper flowmonHelper;
   NodeContainer endpointNodes;
