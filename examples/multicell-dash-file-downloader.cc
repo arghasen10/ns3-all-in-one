@@ -395,6 +395,32 @@ NotifyHandoverEndOkEnb (std::string context,
 
 
 void
+traceuefunc (std::string path, RxPacketTraceParams params)
+{
+  std::fstream tracefile;
+  std::string tracefilename = "tracefile.csv";
+  tracefile.open (tracefilename, std::ios::out | std::ios::app);
+
+  std::cout << "DL\t" << Simulator::Now ().GetSeconds () << "\t" 
+                      << params.m_frameNum << "\t" << +params.m_sfNum << "\t" 
+                      << +params.m_slotNum << "\t" << +params.m_symStart << "\t" 
+                      << +params.m_numSym << "\t" << params.m_cellId << "\t" 
+                      << params.m_rnti << "\t" << +params.m_ccId << "\t" 
+                      << params.m_tbSize << "\t" << +params.m_mcs << "\t" 
+                      << +params.m_rv << "\t" << 10 * std::log10 (params.m_sinr) << "\t" 
+                      << params.m_corrupt << "\t" <<  params.m_tbler << std::endl;
+  tracefile << "DL," << Simulator::Now ().GetSeconds () << "," 
+                      << params.m_frameNum << "," << +params.m_sfNum << "," 
+                      << +params.m_slotNum << "," << +params.m_symStart << "," 
+                      << +params.m_numSym << "," << params.m_cellId << "," 
+                      << params.m_rnti << "," << +params.m_ccId << "," 
+                      << params.m_tbSize << "," << +params.m_mcs << "," 
+                      << +params.m_rv << "," << 10 * std::log10 (params.m_sinr) << "," 
+                      << params.m_corrupt << "," <<  params.m_tbler << std::endl;
+}
+
+
+void
 storeFlowMonitor (Ptr<ns3::FlowMonitor> monitor,
                   FlowMonitorHelper &flowmonHelper)
 {
@@ -947,9 +973,18 @@ main (int argc, char *argv[])
   fileout.open(handoverfilename,std::ios::out | std::ios::trunc);
   fileout << "Time,Event,IMSI,CellId,RNTI,TargetCellId";
   fileout << std::endl; 
+
+  //MCS and other rxtrace report file
+  std::fstream tracefile;
+  std::string tracefilename = "tracefile.csv";
+  tracefile.open (tracefilename, std::ios::out | std::ios::trunc);
+  tracefile << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler";
+  tracefile << std::endl;
+
   // Install and start applications on UEs and remote host
   uint16_t dlPort = 1234;
   ApplicationContainer clientApps, serverApps;
+
 
   //	ApplicationContainer clientAppsEmbb, serverAppsEmbb;
 
@@ -958,7 +993,7 @@ main (int argc, char *argv[])
 
   int counter = 0;
   DashHttpDownloadHelper dlClient (internetIpIfaces.GetAddress (1), dlPort); //Remotehost is the second node, pgw is first
-  dlClient.SetAttribute ("Size", UintegerValue (0x40000000));
+  dlClient.SetAttribute ("Size", UintegerValue (40000000));
   dlClient.SetAttribute ("NumberOfDownload", UintegerValue (1));
   dlClient.SetAttribute ("OnStartCB",
                          CallbackValue (MakeBoundCallback (onStart, &counter)));
@@ -1041,6 +1076,9 @@ main (int argc, char *argv[])
                    MakeCallback (&NotifyHandoverEndOkEnb));
   Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/HandoverEndOk",
                    MakeCallback (&NotifyHandoverEndOkUe));
+
+  Config::Connect ("/NodeList/"+std::to_string (ueNodes.Get (8)->GetId ())+"/DeviceList/*/MmWaveComponentCarrierMapUe/*/MmWaveUePhy/DlSpectrumPhy/RxPacketTraceUe",
+                   MakeCallback (&traceuefunc));
   AnimationInterface anim ("animation-multi-enbs-dash-file-dn.xml");
   for (uint32_t i = 0; i < lteEnbNodes.GetN(); i++)
   {
