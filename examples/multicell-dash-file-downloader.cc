@@ -76,7 +76,7 @@ onStop (int *count)
       auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
       std::cout << "Simulation stopped at: " << ctime(&timenow) << std::endl;
       std::fstream simtimefile;
-      std::string simfilename = "simulation_time.csv";
+      std::string simfilename = "simulation_time2.csv";
       simtimefile.open(simfilename,std::ios::out | std::ios::app);
       simtimefile << "Stop," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
 
@@ -398,7 +398,7 @@ void
 traceuefunc (std::string path, RxPacketTraceParams params)
 {
   std::fstream tracefile;
-  std::string tracefilename = "tracefile.csv";
+  std::string tracefilename = "tracefileue.csv";
   tracefile.open (tracefilename, std::ios::out | std::ios::app);
 
   std::cout << "DL\t" << Simulator::Now ().GetSeconds () << "\t" 
@@ -408,7 +408,8 @@ traceuefunc (std::string path, RxPacketTraceParams params)
                       << params.m_rnti << "\t" << +params.m_ccId << "\t" 
                       << params.m_tbSize << "\t" << +params.m_mcs << "\t" 
                       << +params.m_rv << "\t" << 10 * std::log10 (params.m_sinr) << "\t" 
-                      << params.m_corrupt << "\t" <<  params.m_tbler << std::endl;
+                      << params.m_corrupt << "\t" <<  params.m_tbler << "\t"
+                      << 10 * std::log10(params.m_sinrMin) << std::endl;
   tracefile << "DL," << Simulator::Now ().GetSeconds () << "," 
                       << params.m_frameNum << "," << +params.m_sfNum << "," 
                       << +params.m_slotNum << "," << +params.m_symStart << "," 
@@ -416,9 +417,37 @@ traceuefunc (std::string path, RxPacketTraceParams params)
                       << params.m_rnti << "," << +params.m_ccId << "," 
                       << params.m_tbSize << "," << +params.m_mcs << "," 
                       << +params.m_rv << "," << 10 * std::log10 (params.m_sinr) << "," 
-                      << params.m_corrupt << "," <<  params.m_tbler << std::endl;
+                      << params.m_corrupt << "," <<  params.m_tbler << ","
+                      << 10 * std::log10(params.m_sinrMin) << std::endl;
 }
 
+
+void
+traceenbfunc (std::string path, RxPacketTraceParams params)
+{
+  std::fstream tracefile;
+  std::string tracefilename = "tracefileenb.csv";
+  tracefile.open (tracefilename, std::ios::out | std::ios::app);
+
+  std::cout << "UL\t" << Simulator::Now ().GetSeconds () << "\t" 
+                      << params.m_frameNum << "\t" << +params.m_sfNum << "\t" 
+                      << +params.m_slotNum << "\t" << +params.m_symStart << "\t" 
+                      << +params.m_numSym << "\t" << params.m_cellId << "\t" 
+                      << params.m_rnti << "\t" << +params.m_ccId << "\t" 
+                      << params.m_tbSize << "\t" << +params.m_mcs << "\t" 
+                      << +params.m_rv << "\t" << 10 * std::log10 (params.m_sinr) << "\t" 
+                      << params.m_corrupt << "\t" <<  params.m_tbler << "\t"
+                      << 10 * std::log10(params.m_sinrMin) << std::endl;
+  tracefile << "UL," << Simulator::Now ().GetSeconds () << "," 
+                      << params.m_frameNum << "," << +params.m_sfNum << "," 
+                      << +params.m_slotNum << "," << +params.m_symStart << "," 
+                      << +params.m_numSym << "," << params.m_cellId << "," 
+                      << params.m_rnti << "," << +params.m_ccId << "," 
+                      << params.m_tbSize << "," << +params.m_mcs << "," 
+                      << +params.m_rv << "," << 10 * std::log10 (params.m_sinr) << "," 
+                      << params.m_corrupt << "," <<  params.m_tbler << ","
+                      << 10 * std::log10(params.m_sinrMin) << std::endl;
+}
 
 void
 storeFlowMonitor (Ptr<ns3::FlowMonitor> monitor,
@@ -756,7 +785,7 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::MmWave3gppBuildingsPropagationLossModel::UpdateCondition", BooleanValue (true)); // enable or disable the LOS/NLOS update when the UE moves
   Config::SetDefault ("ns3::AntennaArrayModel::AntennaHorizontalSpacing", DoubleValue (0.5));
   Config::SetDefault ("ns3::AntennaArrayModel::AntennaVerticalSpacing", DoubleValue (0.5));
-  Config::SetDefault ("ns3::MmWave3gppChannel::UpdatePeriod", TimeValue (MilliSeconds (100))); // interval after which the channel for a moving user is updated,
+  Config::SetDefault ("ns3::MmWave3gppChannel::UpdatePeriod", TimeValue (MilliSeconds (1000))); // interval after which the channel for a moving user is updated,
   
    // with spatial consistency procedure. If 0, spatial consistency is not used
   Config::SetDefault ("ns3::MmWave3gppChannel::DirectBeam", BooleanValue (true)); // Set true to perform the beam in the exact direction of receiver node.
@@ -975,11 +1004,17 @@ main (int argc, char *argv[])
   fileout << std::endl; 
 
   //MCS and other rxtrace report file
-  std::fstream tracefile;
-  std::string tracefilename = "tracefile.csv";
-  tracefile.open (tracefilename, std::ios::out | std::ios::trunc);
-  tracefile << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler";
-  tracefile << std::endl;
+  std::fstream tracefile1;
+  std::string tracefilename1 = "tracefileue.csv";
+  tracefile1.open (tracefilename1, std::ios::out | std::ios::trunc);
+  tracefile1 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
+  tracefile1 << std::endl;
+
+  std::fstream tracefile2;
+  std::string tracefilename = "tracefileenb.csv";
+  tracefile2.open (tracefilename, std::ios::out | std::ios::trunc);
+  tracefile2 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
+  tracefile2 << std::endl;
 
   // Install and start applications on UEs and remote host
   uint16_t dlPort = 1234;
@@ -1079,6 +1114,9 @@ main (int argc, char *argv[])
 
   Config::Connect ("/NodeList/"+std::to_string (ueNodes.Get (8)->GetId ())+"/DeviceList/*/MmWaveComponentCarrierMapUe/*/MmWaveUePhy/DlSpectrumPhy/RxPacketTraceUe",
                    MakeCallback (&traceuefunc));
+
+  Config::Connect ("/NodeList/*/DeviceList/*/ComponentCarrierMap/*/MmWaveEnbPhy/DlSpectrumPhy/RxPacketTraceEnb",
+                   MakeCallback (&traceenbfunc));
   AnimationInterface anim ("animation-multi-enbs-dash-file-dn.xml");
   for (uint32_t i = 0; i < lteEnbNodes.GetN(); i++)
   {
@@ -1102,7 +1140,7 @@ main (int argc, char *argv[])
   auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   std::cout << "Simulation started at: " << ctime(&timenow) << std::endl; 
   std::fstream simtimefile;
-  std::string simfilename = "simulation_time.csv";
+  std::string simfilename = "simulation_time2.csv";
   simtimefile.open(simfilename,std::ios::out | std::ios::trunc);
   simtimefile << "Type,Simulation Time,RealTime" << std::endl;
   simtimefile << "Start," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
