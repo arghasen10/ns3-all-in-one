@@ -398,7 +398,7 @@ void
 traceuefunc (std::string path, RxPacketTraceParams params)
 {
   std::fstream tracefile;
-  std::string tracefilename = "tracefileue.csv";
+  std::string tracefilename = "tracefileuelarge.csv";
   tracefile.open (tracefilename, std::ios::out | std::ios::app);
 
   std::cout << "DL\t" << Simulator::Now ().GetSeconds () << "\t" 
@@ -426,7 +426,7 @@ void
 traceenbfunc (std::string path, RxPacketTraceParams params)
 {
   std::fstream tracefile;
-  std::string tracefilename = "tracefileenb.csv";
+  std::string tracefilename = "tracefileenblarge.csv";
   tracefile.open (tracefilename, std::ios::out | std::ios::app);
 
   std::cout << "UL\t" << Simulator::Now ().GetSeconds () << "\t" 
@@ -641,7 +641,7 @@ main (int argc, char *argv[])
 
   std::list<Box>  m_previousBlocks;
   std::string outputDir = "multicelldashStat";
-  std::string nodeTraceFile = "trace";
+  std::string nodeTraceFile = "tracehighspeedlarge";
   double nodeTraceInterval = 1;
   double udpAppStartTime = 0.4; //seconds
 
@@ -942,7 +942,7 @@ main (int argc, char *argv[])
   ueMobility.SetPositionAllocator(staPositionAllocator);
   ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
     "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
-    "Speed", StringValue("ns3::UniformRandomVariable[Min=20|Max=50]"));
+    "Speed", StringValue("ns3::UniformRandomVariable[Min=50|Max=100]"));
   ueMobility.Install (ueNodes);
   BuildingsHelper::Install(ueNodes);
   
@@ -1005,13 +1005,13 @@ main (int argc, char *argv[])
 
   //MCS and other rxtrace report file
   std::fstream tracefile1;
-  std::string tracefilename1 = "tracefileue.csv";
+  std::string tracefilename1 = "tracefileuelarge.csv";
   tracefile1.open (tracefilename1, std::ios::out | std::ios::trunc);
   tracefile1 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
   tracefile1 << std::endl;
 
   std::fstream tracefile2;
-  std::string tracefilename = "tracefileenb.csv";
+  std::string tracefilename = "tracefileenblarge.csv";
   tracefile2.open (tracefilename, std::ios::out | std::ios::trunc);
   tracefile2 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
   tracefile2 << std::endl;
@@ -1028,7 +1028,7 @@ main (int argc, char *argv[])
 
   int counter = 0;
   DashHttpDownloadHelper dlClient (internetIpIfaces.GetAddress (1), dlPort); //Remotehost is the second node, pgw is first
-  dlClient.SetAttribute ("Size", UintegerValue (40000000));
+  dlClient.SetAttribute ("Size", UintegerValue (1000000000));
   dlClient.SetAttribute ("NumberOfDownload", UintegerValue (1));
   dlClient.SetAttribute ("OnStartCB",
                          CallbackValue (MakeBoundCallback (onStart, &counter)));
@@ -1118,6 +1118,11 @@ main (int argc, char *argv[])
   Config::Connect ("/NodeList/*/DeviceList/*/ComponentCarrierMap/*/MmWaveEnbPhy/DlSpectrumPhy/RxPacketTraceEnb",
                    MakeCallback (&traceenbfunc));
   AnimationInterface anim ("animation-multi-enbs-dash-file-dn.xml");
+
+  //Enable pdcp trace
+
+  mmwaveHelper->EnablePdcpTraces ();
+
   for (uint32_t i = 0; i < lteEnbNodes.GetN(); i++)
   {
     anim.UpdateNodeDescription(lteEnbNodes.Get(i), "LTE eNb");
