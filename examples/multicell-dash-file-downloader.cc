@@ -560,7 +560,7 @@ const std::string rrcStates[] =
 
 if (firstLine)
 {
-    return "nodeId,velo_x,velo_y,pos_x,pos_y,IsLinkUp,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw,dist1,dist2,dist3,dist4,dist5,dist6,dist7,dist8,dist9,dist10";
+    return "nodeId,velo_x,velo_y,pos_x,pos_y,IsLinkUp,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw,distfromcell";
 }
 std::stringstream stream;
 stream << std::to_string (node->GetId ());
@@ -614,15 +614,19 @@ stream << "," << std::to_string (rrc->GetState ());
 stream << "," << rrcStates[rrc->GetState ()];
 stream << "," << std::to_string (rrc->GetCellId ());
 stream << "," << std::to_string (rrc->GetDlBandwidth ());
-
+uint16_t cell_id = rrc->GetCellId();
 
 for(uint32_t i = 0; i < gnbNodes->GetN(); i++)
-    {
-    auto ap = gnbNodes->Get(i);
-    auto apModel = ap->GetObject<MobilityModel> ();
-//      auto appos = apModel->GetPosition();
-    stream << "," << mModel->GetDistanceFrom(apModel);
+{
+    Ptr<MmWaveEnbNetDevice> mmdev = DynamicCast<MmWaveEnbNetDevice> (gnbNodes->Get(i)->GetDevice(0));
+    if (mmdev->GetCellId () == cell_id){
+        auto ap = gnbNodes->Get(i);
+        auto apModel = ap->GetObject<MobilityModel> ();
+        //      auto appos = apModel->GetPosition();
+        stream << "," << mModel->GetDistanceFrom(apModel);
     }
+    
+}
 
 return stream.str ();
   
@@ -1120,7 +1124,6 @@ main (int argc, char *argv[])
   AnimationInterface anim ("animation-multi-enbs-dash-file-dn.xml");
 
   //Enable pdcp trace
-
   mmwaveHelper->EnablePdcpTraces ();
 
   for (uint32_t i = 0; i < lteEnbNodes.GetN(); i++)
