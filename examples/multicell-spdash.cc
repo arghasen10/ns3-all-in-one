@@ -39,7 +39,7 @@
 #include <ns3/lte-ue-net-device.h>
 #include "ns3/log.h"
 #include "ns3/internet-apps-module.h"
-#include "ns3/dash-helper.h"
+#include "ns3/spdash-helper.h"
 #include <iostream>
 #include <ctime>
 #include <stdlib.h>
@@ -237,7 +237,7 @@ NotifyConnectionEstablishedUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
+    std::string filename = "handover_spdash2.csv";
     fileout.open(filename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "ConnectionEstablishedUe" <<",";
@@ -398,7 +398,7 @@ void
 traceuefunc (std::string path, RxPacketTraceParams params)
 {
   std::fstream tracefile;
-  std::string tracefilename = "tracefileuelarge.csv";
+  std::string tracefilename = "spdashtracefileuelarge.csv";
   tracefile.open (tracefilename, std::ios::out | std::ios::app);
 
   std::cout << "DL\t" << Simulator::Now ().GetSeconds () << "\t" 
@@ -426,7 +426,7 @@ void
 traceenbfunc (std::string path, RxPacketTraceParams params)
 {
   std::fstream tracefile;
-  std::string tracefilename = "tracefileenblarge.csv";
+  std::string tracefilename = "spdashtracefileenblarge.csv";
   tracefile.open (tracefilename, std::ios::out | std::ios::app);
 
   std::cout << "UL\t" << Simulator::Now ().GetSeconds () << "\t" 
@@ -644,8 +644,8 @@ main (int argc, char *argv[])
   double sfPeriod = 100.0;
 
   std::list<Box>  m_previousBlocks;
-  std::string outputDir = "multicelldashStat";
-  std::string nodeTraceFile = "tracehighspeedlarge";
+  std::string outputDir = "multicellSpDashStat";
+  std::string nodeTraceFile = "tracespdash";
   double nodeTraceInterval = 1;
   double udpAppStartTime = 0.4; //seconds
 
@@ -1009,13 +1009,13 @@ main (int argc, char *argv[])
 
   //MCS and other rxtrace report file
   std::fstream tracefile1;
-  std::string tracefilename1 = "tracefileuelarge.csv";
+  std::string tracefilename1 = "spdashtracefileuelarge.csv";
   tracefile1.open (tracefilename1, std::ios::out | std::ios::trunc);
   tracefile1 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
   tracefile1 << std::endl;
 
   std::fstream tracefile2;
-  std::string tracefilename = "tracefileenblarge.csv";
+  std::string tracefilename = "spdashtracefileenblarge.csv";
   tracefile2.open (tracefilename, std::ios::out | std::ios::trunc);
   tracefile2 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
   tracefile2 << std::endl;
@@ -1027,24 +1027,24 @@ main (int argc, char *argv[])
 
   //	ApplicationContainer clientAppsEmbb, serverAppsEmbb;
 
-  DashServerHelper dashSrHelper (dlPort);
+  SpDashServerHelper dashSrHelper (dlPort);
   serverApps.Add (dashSrHelper.Install (remoteHost));
 
   int counter = 0;
-  DashHttpDownloadHelper dlClient (internetIpIfaces.GetAddress (1), dlPort); //Remotehost is the second node, pgw is first
-  dlClient.SetAttribute ("Size", UintegerValue (1000000000));
-  dlClient.SetAttribute ("NumberOfDownload", UintegerValue (1));
+  SpDashClientHelper dlClient (internetIpIfaces.GetAddress (1), dlPort); //Remotehost is the second node, pgw is first
+  //dlClient.SetAttribute ("Size", UintegerValue (0xFFFFFF));
+  //dlClient.SetAttribute ("NumberOfDownload", UintegerValue (1));
   dlClient.SetAttribute ("OnStartCB",
                          CallbackValue (MakeBoundCallback (onStart, &counter)));
   dlClient.SetAttribute ("OnStopCB",
                          CallbackValue (MakeBoundCallback (onStop, &counter)));
   
   dlClient.SetAttribute ("NodeTracePath", StringValue (outputDir + "/" + nodeTraceFile));
-  dlClient.SetAttribute ("NodeTraceInterval", TimeValue (10*MilliSeconds (nodeTraceInterval)));
+  dlClient.SetAttribute ("NodeTraceInterval", TimeValue (Seconds (nodeTraceInterval)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeCallback (readNodeTrace)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeBoundCallback (readNodeTrace, &mmWaveEnbNodes)));
-  // dlClient.SetAttribute ("TracePath", StringValue (outputDir + "/TraceData"));
-  // dlClient.SetAttribute("AbrLogPath", StringValue (outputDir + "/AbrData"));
+  dlClient.SetAttribute ("TracePath", StringValue (outputDir + "/TraceData"));
+  dlClient.SetAttribute("AbrLogPath", StringValue (outputDir + "/AbrData"));
 
 
   dlClient.SetAttribute ("Timeout", TimeValue(Seconds(-1)));
@@ -1121,7 +1121,7 @@ main (int argc, char *argv[])
 
   Config::Connect ("/NodeList/*/DeviceList/*/ComponentCarrierMap/*/MmWaveEnbPhy/DlSpectrumPhy/RxPacketTraceEnb",
                    MakeCallback (&traceenbfunc));
-  AnimationInterface anim ("animation-multi-enbs-dash-file-dn.xml");
+  AnimationInterface anim ("animation-multi-enbs-spdash.xml");
 
   //Enable pdcp trace
   
@@ -1145,27 +1145,21 @@ main (int argc, char *argv[])
   anim.UpdateNodeDescription(pgw,"PGW");
   anim.UpdateNodeDescription(mme,"MME");
   anim.UpdateNodeDescription(remoteHostContainer.Get(0),"Remote Host");
-  p2ph.EnablePcapAll ("multicell-stat-dash-file-downloader");
+  p2ph.EnablePcapAll ("multicell-stat-spdash");
   auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   std::cout << "Simulation started at: " << ctime(&timenow) << std::endl; 
   std::fstream simtimefile;
-  std::string simfilename = "simulation_time2.csv";
+  std::string simfilename = "simulation_time_spdash.csv";
   simtimefile.open(simfilename,std::ios::out | std::ios::trunc);
   simtimefile << "Type,Simulation Time,RealTime" << std::endl;
   simtimefile << "Start," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
 
   Simulator::Run ();
-  FlowMonitorHelper flowmonHelper;
+  
   NodeContainer endpointNodes;
   endpointNodes.Add (remoteHost);
   endpointNodes.Add (ueNodes);
 
-  Ptr<ns3::FlowMonitor> monitor = flowmonHelper.Install (endpointNodes);
-  monitor->SetAttribute ("DelayBinWidth", DoubleValue (0.001));
-  monitor->SetAttribute ("JitterBinWidth", DoubleValue (0.001));
-  monitor->SetAttribute ("PacketSizeBinWidth", DoubleValue (20));
-
-  storeFlowMonitor (monitor, flowmonHelper);
   Simulator::Destroy ();
   return 0;
 }
