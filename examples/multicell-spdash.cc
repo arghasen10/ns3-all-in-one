@@ -57,8 +57,14 @@ using namespace mmwave;
  * attaches one MC UE to both and starts a flow for the UE to and from a remote host.
  */
 
-NS_LOG_COMPONENT_DEFINE ("multicell");
+NS_LOG_COMPONENT_DEFINE ("spdash");
 
+
+std::string outputDir = "multicellSpDashStatpensieve";
+std::string handoverfilename = outputDir + "/handover_Spdash_pensieve.csv";
+std::string tracefilename1 = outputDir + "/Spdashtracefileuelargepensieve.csv";
+std::string tracefilename2 = outputDir + "/Spdashtracefileenblargepensieve.csv";
+std::string simfilename = outputDir + "/simulation_time_Spdash_pensieve.csv"; 
 
 void
 onStart (int *count)
@@ -76,7 +82,6 @@ onStop (int *count)
       auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
       std::cout << "Simulation stopped at: " << ctime(&timenow) << std::endl;
       std::fstream simtimefile;
-      std::string simfilename = "simulation_time2.csv";
       simtimefile.open(simfilename,std::ios::out | std::ios::app);
       simtimefile << "Stop," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
 
@@ -237,8 +242,7 @@ NotifyConnectionEstablishedUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_spdash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "ConnectionEstablishedUe" <<",";
     fileout << imsi << ",";
@@ -263,8 +267,7 @@ NotifyHandoverStartUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverStartUe" <<",";
     fileout << imsi << ",";
@@ -292,8 +295,7 @@ NotifyHandoverEndOkUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverEndOkUe" <<",";
     fileout << imsi << ",";
@@ -319,8 +321,7 @@ NotifyConnectionEstablishedEnb (std::string context,
   if (imsi==9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "ConnectionEstablishedEnb" <<",";
     fileout << imsi << ",";
@@ -348,8 +349,7 @@ NotifyHandoverStartEnb (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverStartEnb" <<",";
     fileout << imsi << ",";
@@ -375,8 +375,7 @@ NotifyHandoverEndOkEnb (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverEndOkEnb" <<",";
     fileout << imsi << ",";
@@ -398,8 +397,7 @@ void
 traceuefunc (std::string path, RxPacketTraceParams params)
 {
   std::fstream tracefile;
-  std::string tracefilename = "spdashtracefileuelarge.csv";
-  tracefile.open (tracefilename, std::ios::out | std::ios::app);
+  tracefile.open (tracefilename1, std::ios::out | std::ios::app);
 
   std::cout << "DL\t" << Simulator::Now ().GetSeconds () << "\t" 
                       << params.m_frameNum << "\t" << +params.m_sfNum << "\t" 
@@ -426,8 +424,8 @@ void
 traceenbfunc (std::string path, RxPacketTraceParams params)
 {
   std::fstream tracefile;
-  std::string tracefilename = "spdashtracefileenblarge.csv";
-  tracefile.open (tracefilename, std::ios::out | std::ios::app);
+  
+  tracefile.open (tracefilename2, std::ios::out | std::ios::app);
 
   std::cout << "UL\t" << Simulator::Now ().GetSeconds () << "\t" 
                       << params.m_frameNum << "\t" << +params.m_sfNum << "\t" 
@@ -644,8 +642,6 @@ main (int argc, char *argv[])
   double sfPeriod = 100.0;
 
   std::list<Box>  m_previousBlocks;
-  std::string outputDir = "multicellSpDashStat";
-  std::string nodeTraceFile = "tracespdash";
   double nodeTraceInterval = 1;
   double udpAppStartTime = 0.4; //seconds
 
@@ -1002,21 +998,19 @@ main (int argc, char *argv[])
 
    //Handover store in file
   std::fstream fileout;
-  std::string handoverfilename = "handover_dash2.csv";
   fileout.open(handoverfilename,std::ios::out | std::ios::trunc);
   fileout << "Time,Event,IMSI,CellId,RNTI,TargetCellId";
   fileout << std::endl; 
 
   //MCS and other rxtrace report file
   std::fstream tracefile1;
-  std::string tracefilename1 = "spdashtracefileuelarge.csv";
+  
   tracefile1.open (tracefilename1, std::ios::out | std::ios::trunc);
   tracefile1 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
   tracefile1 << std::endl;
 
   std::fstream tracefile2;
-  std::string tracefilename = "spdashtracefileenblarge.csv";
-  tracefile2.open (tracefilename, std::ios::out | std::ios::trunc);
+  tracefile2.open (tracefilename2, std::ios::out | std::ios::trunc);
   tracefile2 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
   tracefile2 << std::endl;
 
@@ -1039,12 +1033,12 @@ main (int argc, char *argv[])
   dlClient.SetAttribute ("OnStopCB",
                          CallbackValue (MakeBoundCallback (onStop, &counter)));
   
-  dlClient.SetAttribute ("NodeTracePath", StringValue (outputDir + "/" + nodeTraceFile));
-  dlClient.SetAttribute ("NodeTraceInterval", TimeValue (Seconds (nodeTraceInterval)));
+  dlClient.SetAttribute ("NodeTracePath", StringValue (outputDir + "/traceSPdashpensieve"));
+  dlClient.SetAttribute ("NodeTraceInterval", TimeValue (10*MilliSeconds (nodeTraceInterval)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeCallback (readNodeTrace)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeBoundCallback (readNodeTrace, &mmWaveEnbNodes)));
-  dlClient.SetAttribute ("TracePath", StringValue (outputDir + "/TraceData"));
-  dlClient.SetAttribute("AbrLogPath", StringValue (outputDir + "/AbrData"));
+  dlClient.SetAttribute ("TracePath", StringValue (outputDir + "/TraceDataSpDashpensieve"));
+  dlClient.SetAttribute("AbrLogPath", StringValue (outputDir + "/AbrDataSpDashpensieve"));
 
 
   dlClient.SetAttribute ("Timeout", TimeValue(Seconds(-1)));
@@ -1121,7 +1115,7 @@ main (int argc, char *argv[])
 
   Config::Connect ("/NodeList/*/DeviceList/*/ComponentCarrierMap/*/MmWaveEnbPhy/DlSpectrumPhy/RxPacketTraceEnb",
                    MakeCallback (&traceenbfunc));
-  AnimationInterface anim ("animation-multi-enbs-spdash.xml");
+  AnimationInterface anim ("animation-spdash-pensieve.xml");
 
   //Enable pdcp trace
   
@@ -1149,7 +1143,6 @@ main (int argc, char *argv[])
   auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   std::cout << "Simulation started at: " << ctime(&timenow) << std::endl; 
   std::fstream simtimefile;
-  std::string simfilename = "simulation_time_spdash.csv";
   simtimefile.open(simfilename,std::ios::out | std::ios::trunc);
   simtimefile << "Type,Simulation Time,RealTime" << std::endl;
   simtimefile << "Start," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;

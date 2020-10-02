@@ -57,7 +57,13 @@ using namespace mmwave;
  * attaches one MC UE to both and starts a flow for the UE to and from a remote host.
  */
 
-NS_LOG_COMPONENT_DEFINE ("multicell");
+NS_LOG_COMPONENT_DEFINE ("dash");
+
+std::string outputDir = "multicellDashStatpensieve";
+std::string handoverfilename = outputDir + "/handover_dash_pensieve.csv";
+std::string tracefilename1 = outputDir + "/dashtracefileuelargepensieve.csv";
+std::string tracefilename2 = outputDir + "/dashtracefileenblargepensieve.csv";
+std::string simfilename = outputDir + "/simulation_time_dash_pensieve.csv"; 
 
 
 void
@@ -73,6 +79,12 @@ onStop (int *count)
   (*count)--;
   if (!(*count))
     {
+      auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+      std::cout << "Simulation stopped at: " << ctime(&timenow) << std::endl;
+      std::fstream simtimefile;
+      simtimefile.open(simfilename,std::ios::out | std::ios::app);
+      simtimefile << "Stop," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
+
       Simulator::Stop ();
     }
 }
@@ -230,8 +242,7 @@ NotifyConnectionEstablishedUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "ConnectionEstablishedUe" <<",";
     fileout << imsi << ",";
@@ -256,8 +267,7 @@ NotifyHandoverStartUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverStartUe" <<",";
     fileout << imsi << ",";
@@ -285,8 +295,7 @@ NotifyHandoverEndOkUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverEndOkUe" <<",";
     fileout << imsi << ",";
@@ -312,8 +321,7 @@ NotifyConnectionEstablishedEnb (std::string context,
   if (imsi==9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "ConnectionEstablishedEnb" <<",";
     fileout << imsi << ",";
@@ -341,8 +349,7 @@ NotifyHandoverStartEnb (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverStartEnb" <<",";
     fileout << imsi << ",";
@@ -368,8 +375,7 @@ NotifyHandoverEndOkEnb (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    std::string filename = "handover_dash2.csv";
-    fileout.open(filename,std::ios::out | std::ios::app);
+    fileout.open(handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverEndOkEnb" <<",";
     fileout << imsi << ",";
@@ -386,6 +392,60 @@ NotifyHandoverEndOkEnb (std::string context,
 
 }
 
+
+void
+traceuefunc (std::string path, RxPacketTraceParams params)
+{
+  std::fstream tracefile;
+  tracefile.open (tracefilename1, std::ios::out | std::ios::app);
+
+  std::cout << "DL\t" << Simulator::Now ().GetSeconds () << "\t" 
+                      << params.m_frameNum << "\t" << +params.m_sfNum << "\t" 
+                      << +params.m_slotNum << "\t" << +params.m_symStart << "\t" 
+                      << +params.m_numSym << "\t" << params.m_cellId << "\t" 
+                      << params.m_rnti << "\t" << +params.m_ccId << "\t" 
+                      << params.m_tbSize << "\t" << +params.m_mcs << "\t" 
+                      << +params.m_rv << "\t" << 10 * std::log10 (params.m_sinr) << "\t" 
+                      << params.m_corrupt << "\t" <<  params.m_tbler << "\t"
+                      << 10 * std::log10(params.m_sinrMin) << std::endl;
+  tracefile << "DL," << Simulator::Now ().GetSeconds () << "," 
+                      << params.m_frameNum << "," << +params.m_sfNum << "," 
+                      << +params.m_slotNum << "," << +params.m_symStart << "," 
+                      << +params.m_numSym << "," << params.m_cellId << "," 
+                      << params.m_rnti << "," << +params.m_ccId << "," 
+                      << params.m_tbSize << "," << +params.m_mcs << "," 
+                      << +params.m_rv << "," << 10 * std::log10 (params.m_sinr) << "," 
+                      << params.m_corrupt << "," <<  params.m_tbler << ","
+                      << 10 * std::log10(params.m_sinrMin) << std::endl;
+}
+
+
+void
+traceenbfunc (std::string path, RxPacketTraceParams params)
+{
+  std::fstream tracefile;
+  
+  tracefile.open (tracefilename2, std::ios::out | std::ios::app);
+
+  std::cout << "UL\t" << Simulator::Now ().GetSeconds () << "\t" 
+                      << params.m_frameNum << "\t" << +params.m_sfNum << "\t" 
+                      << +params.m_slotNum << "\t" << +params.m_symStart << "\t" 
+                      << +params.m_numSym << "\t" << params.m_cellId << "\t" 
+                      << params.m_rnti << "\t" << +params.m_ccId << "\t" 
+                      << params.m_tbSize << "\t" << +params.m_mcs << "\t" 
+                      << +params.m_rv << "\t" << 10 * std::log10 (params.m_sinr) << "\t" 
+                      << params.m_corrupt << "\t" <<  params.m_tbler << "\t"
+                      << 10 * std::log10(params.m_sinrMin) << std::endl;
+  tracefile << "UL," << Simulator::Now ().GetSeconds () << "," 
+                      << params.m_frameNum << "," << +params.m_sfNum << "," 
+                      << +params.m_slotNum << "," << +params.m_symStart << "," 
+                      << +params.m_numSym << "," << params.m_cellId << "," 
+                      << params.m_rnti << "," << +params.m_ccId << "," 
+                      << params.m_tbSize << "," << +params.m_mcs << "," 
+                      << +params.m_rv << "," << 10 * std::log10 (params.m_sinr) << "," 
+                      << params.m_corrupt << "," <<  params.m_tbler << ","
+                      << 10 * std::log10(params.m_sinrMin) << std::endl;
+}
 
 void
 storeFlowMonitor (Ptr<ns3::FlowMonitor> monitor,
@@ -498,7 +558,7 @@ const std::string rrcStates[] =
 
 if (firstLine)
 {
-    return "nodeId,velo_x,velo_y,pos_x,pos_y,IsLinkUp,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw,dist1,dist2,dist3,dist4,dist5,dist6,dist7,dist8,dist9,dist10";
+    return "nodeId,velo_x,velo_y,pos_x,pos_y,IsLinkUp,Csgid,Earfcn,Imsi,rrcState,rrcState_str,rrcCellId,rrcDlBw,distfromcell";
 }
 std::stringstream stream;
 stream << std::to_string (node->GetId ());
@@ -552,15 +612,19 @@ stream << "," << std::to_string (rrc->GetState ());
 stream << "," << rrcStates[rrc->GetState ()];
 stream << "," << std::to_string (rrc->GetCellId ());
 stream << "," << std::to_string (rrc->GetDlBandwidth ());
-
+uint16_t cell_id = rrc->GetCellId();
 
 for(uint32_t i = 0; i < gnbNodes->GetN(); i++)
-    {
-    auto ap = gnbNodes->Get(i);
-    auto apModel = ap->GetObject<MobilityModel> ();
-//      auto appos = apModel->GetPosition();
-    stream << "," << mModel->GetDistanceFrom(apModel);
+{
+    Ptr<MmWaveEnbNetDevice> mmdev = DynamicCast<MmWaveEnbNetDevice> (gnbNodes->Get(i)->GetDevice(0));
+    if (mmdev->GetCellId () == cell_id){
+        auto ap = gnbNodes->Get(i);
+        auto apModel = ap->GetObject<MobilityModel> ();
+        //      auto appos = apModel->GetPosition();
+        stream << "," << mModel->GetDistanceFrom(apModel);
     }
+    
+}
 
 return stream.str ();
   
@@ -578,8 +642,6 @@ main (int argc, char *argv[])
   double sfPeriod = 100.0;
 
   std::list<Box>  m_previousBlocks;
-  std::string outputDir = "multicellStat2";
-  std::string nodeTraceFile = "trace";
   double nodeTraceInterval = 1;
   double udpAppStartTime = 0.4; //seconds
 
@@ -723,7 +785,7 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::MmWave3gppBuildingsPropagationLossModel::UpdateCondition", BooleanValue (true)); // enable or disable the LOS/NLOS update when the UE moves
   Config::SetDefault ("ns3::AntennaArrayModel::AntennaHorizontalSpacing", DoubleValue (0.5));
   Config::SetDefault ("ns3::AntennaArrayModel::AntennaVerticalSpacing", DoubleValue (0.5));
-  Config::SetDefault ("ns3::MmWave3gppChannel::UpdatePeriod", TimeValue (MilliSeconds (100))); // interval after which the channel for a moving user is updated,
+  Config::SetDefault ("ns3::MmWave3gppChannel::UpdatePeriod", TimeValue (MilliSeconds (1000))); // interval after which the channel for a moving user is updated,
   
    // with spatial consistency procedure. If 0, spatial consistency is not used
   Config::SetDefault ("ns3::MmWave3gppChannel::DirectBeam", BooleanValue (true)); // Set true to perform the beam in the exact direction of receiver node.
@@ -880,7 +942,7 @@ main (int argc, char *argv[])
   ueMobility.SetPositionAllocator(staPositionAllocator);
   ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
     "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
-    "Speed", StringValue("ns3::UniformRandomVariable[Min=20|Max=50]"));
+    "Speed", StringValue("ns3::UniformRandomVariable[Min=50|Max=100]"));
   ueMobility.Install (ueNodes);
   BuildingsHelper::Install(ueNodes);
   
@@ -936,13 +998,26 @@ main (int argc, char *argv[])
 
    //Handover store in file
   std::fstream fileout;
-  std::string handoverfilename = "handover_dash2.csv";
   fileout.open(handoverfilename,std::ios::out | std::ios::trunc);
   fileout << "Time,Event,IMSI,CellId,RNTI,TargetCellId";
   fileout << std::endl; 
+
+  //MCS and other rxtrace report file
+  std::fstream tracefile1;
+  
+  tracefile1.open (tracefilename1, std::ios::out | std::ios::trunc);
+  tracefile1 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
+  tracefile1 << std::endl;
+
+  std::fstream tracefile2;
+  tracefile2.open (tracefilename2, std::ios::out | std::ios::trunc);
+  tracefile2 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
+  tracefile2 << std::endl;
+
   // Install and start applications on UEs and remote host
   uint16_t dlPort = 1234;
   ApplicationContainer clientApps, serverApps;
+
 
   //	ApplicationContainer clientAppsEmbb, serverAppsEmbb;
 
@@ -958,12 +1033,12 @@ main (int argc, char *argv[])
   dlClient.SetAttribute ("OnStopCB",
                          CallbackValue (MakeBoundCallback (onStop, &counter)));
   
-  dlClient.SetAttribute ("NodeTracePath", StringValue (outputDir + "/" + nodeTraceFile));
-  dlClient.SetAttribute ("NodeTraceInterval", TimeValue (Seconds (nodeTraceInterval)));
+  dlClient.SetAttribute ("NodeTracePath", StringValue (outputDir + "/tracedashpensieve"));
+  dlClient.SetAttribute ("NodeTraceInterval", TimeValue (10*MilliSeconds (nodeTraceInterval)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeCallback (readNodeTrace)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeBoundCallback (readNodeTrace, &mmWaveEnbNodes)));
-  dlClient.SetAttribute ("TracePath", StringValue (outputDir + "/TraceData"));
-  dlClient.SetAttribute("AbrLogPath", StringValue (outputDir + "/AbrData"));
+  dlClient.SetAttribute ("TracePath", StringValue (outputDir + "/TraceDataDashpensieve"));
+  dlClient.SetAttribute("AbrLogPath", StringValue (outputDir + "/AbrDataDashpensieve"));
 
 
   dlClient.SetAttribute ("Timeout", TimeValue(Seconds(-1)));
@@ -1034,7 +1109,18 @@ main (int argc, char *argv[])
                    MakeCallback (&NotifyHandoverEndOkEnb));
   Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/HandoverEndOk",
                    MakeCallback (&NotifyHandoverEndOkUe));
-  AnimationInterface anim ("animation-two-enbs-grid-final-stats.xml");
+
+  Config::Connect ("/NodeList/"+std::to_string (ueNodes.Get (8)->GetId ())+"/DeviceList/*/MmWaveComponentCarrierMapUe/*/MmWaveUePhy/DlSpectrumPhy/RxPacketTraceUe",
+                   MakeCallback (&traceuefunc));
+
+  Config::Connect ("/NodeList/*/DeviceList/*/ComponentCarrierMap/*/MmWaveEnbPhy/DlSpectrumPhy/RxPacketTraceEnb",
+                   MakeCallback (&traceenbfunc));
+  AnimationInterface anim ("animation-dash-pensieve.xml");
+
+  //Enable pdcp trace
+  
+  mmwaveHelper->EnablePdcpTraces ();
+
   for (uint32_t i = 0; i < lteEnbNodes.GetN(); i++)
   {
     anim.UpdateNodeDescription(lteEnbNodes.Get(i), "LTE eNb");
@@ -1053,19 +1139,20 @@ main (int argc, char *argv[])
   anim.UpdateNodeDescription(pgw,"PGW");
   anim.UpdateNodeDescription(mme,"MME");
   anim.UpdateNodeDescription(remoteHostContainer.Get(0),"Remote Host");
-  p2ph.EnablePcapAll ("multicell-stat-dash2");
+  p2ph.EnablePcapAll ("multicell-stat-dash");
+  auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  std::cout << "Simulation started at: " << ctime(&timenow) << std::endl; 
+  std::fstream simtimefile;
+  simtimefile.open(simfilename,std::ios::out | std::ios::trunc);
+  simtimefile << "Type,Simulation Time,RealTime" << std::endl;
+  simtimefile << "Start," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
+
   Simulator::Run ();
-  FlowMonitorHelper flowmonHelper;
+  
   NodeContainer endpointNodes;
   endpointNodes.Add (remoteHost);
   endpointNodes.Add (ueNodes);
 
-  Ptr<ns3::FlowMonitor> monitor = flowmonHelper.Install (endpointNodes);
-  monitor->SetAttribute ("DelayBinWidth", DoubleValue (0.001));
-  monitor->SetAttribute ("JitterBinWidth", DoubleValue (0.001));
-  monitor->SetAttribute ("PacketSizeBinWidth", DoubleValue (20));
-
-  storeFlowMonitor (monitor, flowmonHelper);
   Simulator::Destroy ();
   return 0;
 }
