@@ -941,25 +941,25 @@ main (int argc, char *argv[])
   Ptr<ListPositionAllocator> apPositionAlloc = CreateObject<ListPositionAllocator> ();
   Ptr<ListPositionAllocator> staPositionAllocator = CreateObject<ListPositionAllocator> ();
 
-  staPositionAllocator->Add (Vector (250,250,1.5));
-  staPositionAllocator->Add (Vector (500,250,1.5));
-  staPositionAllocator->Add (Vector (750,250,1.5));
-  staPositionAllocator->Add (Vector (200,500,1.5));
-  staPositionAllocator->Add (Vector (400,500,1.5));
-  staPositionAllocator->Add (Vector (600,500,1.5));
-  staPositionAllocator->Add (Vector (800,500,1.5));
-  staPositionAllocator->Add (Vector (250,750,1.5));
-  staPositionAllocator->Add (Vector (500,750,1.5));
-  staPositionAllocator->Add (Vector (750,750,1.5));
-  // double x_random, y_random;
-  // for(uint32_t i = 0; i < ueNodes.GetN(); i ++)
-  // {
-  //   x_random = (rand() % 1000) + 1;
-  //   y_random = (rand() % 1000) + 1;
-  //   staPositionAllocator->Add (Vector (x_random, y_random, 1.5));
-  // }
+  // staPositionAllocator->Add (Vector (248,248,1.5));
+  // staPositionAllocator->Add (Vector (502,248,1.5));
+  // staPositionAllocator->Add (Vector (752,252,1.5));
+  // staPositionAllocator->Add (Vector (202,502,1.5));
+  // staPositionAllocator->Add (Vector (402,506,1.5));
+  // staPositionAllocator->Add (Vector (610,509,1.5));
+  // staPositionAllocator->Add (Vector (815,514,1.5));
+  // staPositionAllocator->Add (Vector (259,754,1.5));
+  // staPositionAllocator->Add (Vector (509,758,1.5));
+  // staPositionAllocator->Add (Vector (759,758,1.5));
+  double x_random, y_random;
+  for(uint32_t i = 0; i < ueNodes.GetN(); i ++)
+  {
+    x_random = (rand() % 1000) + 1;
+    y_random = (rand() % 1000) + 1;
+    staPositionAllocator->Add (Vector (x_random, y_random, 1.5));
+  }
 
-  // ueMobility.SetPositionAllocator(staPositionAllocator);
+  ueMobility.SetPositionAllocator(staPositionAllocator);
   // ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
   //   "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
   //   "Speed", StringValue("ns3::UniformRandomVariable[Min=50|Max=100]"));
