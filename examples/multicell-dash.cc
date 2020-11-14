@@ -939,9 +939,18 @@ main (int argc, char *argv[])
   Ptr<ListPositionAllocator> ltepositionAloc = CreateObject<ListPositionAllocator> ();
     
   Ptr<ListPositionAllocator> apPositionAlloc = CreateObject<ListPositionAllocator> ();
-  //Ptr<ListPositionAllocator> staPositionAllocator = CreateObject<ListPositionAllocator> ();
+  Ptr<ListPositionAllocator> staPositionAllocator = CreateObject<ListPositionAllocator> ();
 
-  
+  staPositionAllocator->Add (Vector (250,250,1.5));
+  staPositionAllocator->Add (Vector (500,250,1.5));
+  staPositionAllocator->Add (Vector (750,250,1.5));
+  staPositionAllocator->Add (Vector (200,500,1.5));
+  staPositionAllocator->Add (Vector (400,500,1.5));
+  staPositionAllocator->Add (Vector (600,500,1.5));
+  staPositionAllocator->Add (Vector (800,500,1.5));
+  staPositionAllocator->Add (Vector (250,750,1.5));
+  staPositionAllocator->Add (Vector (500,750,1.5));
+  staPositionAllocator->Add (Vector (750,750,1.5));
   // double x_random, y_random;
   // for(uint32_t i = 0; i < ueNodes.GetN(); i ++)
   // {
@@ -954,14 +963,14 @@ main (int argc, char *argv[])
   // ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
   //   "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
   //   "Speed", StringValue("ns3::UniformRandomVariable[Min=50|Max=100]"));
-  ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-                                 "MinX", DoubleValue (0),
-                                 "MinY", DoubleValue (0),
-                                 "MaxX", DoubleValue (1000),
-                                 "MaxY", DoubleValue (1000),
-                                 "DeltaX", DoubleValue (100.0),
-                                 "DeltaY", DoubleValue (10.0),
-                                 "LayoutType", StringValue ("RowFirst"));
+  // ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+  //                                "MinX", DoubleValue (0),
+  //                                "MinY", DoubleValue (0),
+  //                                "MaxX", DoubleValue (1000),
+  //                                "MaxY", DoubleValue (1000),
+  //                                "DeltaX", DoubleValue (100.0),
+  //                                "DeltaY", DoubleValue (10.0),
+  //                                "LayoutType", StringValue ("RowFirst"));
   ueMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   ueMobility.Install (ueNodes);
   BuildingsHelper::Install(ueNodes);
