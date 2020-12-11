@@ -61,12 +61,13 @@ using namespace mmwave;
 
 NS_LOG_COMPONENT_DEFINE ("dash");
 
-std::string outputDir = "multicellDashStatbola3";
+std::string outputDir = "multicellDashStatbola9";
 std::string handoverfilename = outputDir + "/handover_dash_pensieve.csv";
 std::string tracefilename1 = outputDir + "/dashtracefileuelargepensieve.csv";
 std::string tracefilename2 = outputDir + "/dashtracefileenblargepensieve.csv";
 std::string simfilename = outputDir + "/simulation_time_dash_pensieve.csv"; 
 std::string energyFileName = outputDir + "/energyfile.csv";
+std::string stateChangefile = outputDir + "/stateChange.csv";
 
 void
 onStart (int *count)
@@ -635,13 +636,53 @@ return stream.str ();
 }
 
 void
+IntStateChange (int32_t old_state, int32_t new_state)
+{
+  std::string old_state_val;
+  std::string new_state_val;
+  switch (old_state)
+  {
+  case 0:
+    old_state_val = "IDLE";
+    break;
+  case 1:
+    old_state_val = "TX";
+    break;
+  case 2:
+    old_state_val = "RX_DATA";
+    break;
+  case 3:
+    old_state_val = "RX_CTRL";
+    break;
+  }
+  switch (new_state)
+  {
+  case 0:
+    new_state_val = "IDLE";
+    break;
+  case 1:
+    new_state_val = "TX";
+    break;
+  case 2:
+    new_state_val = "RX_DATA";
+    break;
+  case 3:
+    new_state_val = "RX_CTRL";
+    break;
+  }
+std::ofstream outFile;
+  outFile.open (stateChangefile, std::ios::out | std::ios::app);
+  outFile << Simulator::Now().GetNanoSeconds () << "," << old_state_val << "," << new_state_val << std::endl;
+}
+
+void
 EnergyConsumptionUpdate (double totaloldEnergyConsumption, double totalnewEnergyConsumption)
 {
   std::cout << "Total Energy Consumption " << totalnewEnergyConsumption << "J" << std::endl;
   Time currentTime = Simulator::Now ();
 std::ofstream outFile;
   outFile.open (energyFileName, std::ios::out | std::ios::app);
-  outFile << currentTime.GetSeconds () << "," << totalnewEnergyConsumption << "," << (totalnewEnergyConsumption-totaloldEnergyConsumption) << std::endl;
+  outFile << currentTime.GetNanoSeconds () << "," << totalnewEnergyConsumption << "," << (totalnewEnergyConsumption-totaloldEnergyConsumption) << std::endl;
 }
 
 int
@@ -939,7 +980,7 @@ main (int argc, char *argv[])
   Ptr<ListPositionAllocator> ltepositionAloc = CreateObject<ListPositionAllocator> ();
     
   Ptr<ListPositionAllocator> apPositionAlloc = CreateObject<ListPositionAllocator> ();
-  Ptr<ListPositionAllocator> staPositionAllocator = CreateObject<ListPositionAllocator> ();
+    // Ptr<ListPositionAllocator> staPositionAllocator = CreateObject<ListPositionAllocator> ();
 
   // staPositionAllocator->Add (Vector (248,248,1.5));
   // staPositionAllocator->Add (Vector (502,248,1.5));
@@ -951,30 +992,33 @@ main (int argc, char *argv[])
   // staPositionAllocator->Add (Vector (259,754,1.5));
   // staPositionAllocator->Add (Vector (509,758,1.5));
   // staPositionAllocator->Add (Vector (759,758,1.5));
-  double x_random, y_random;
-  for(uint32_t i = 0; i < ueNodes.GetN(); i ++)
-  {
-    x_random = (rand() % 1000) + 1;
-    y_random = (rand() % 1000) + 1;
-    staPositionAllocator->Add (Vector (x_random, y_random, 1.5));
-  }
+  // double x_random, y_random;
+  // for (uint32_t i = 0; i < ueNodes.GetN (); i++)
+  //   {
+  //     x_random = (rand () % 1000) + 1;
+  //     y_random = (rand () % 1000) + 1;
+  //     staPositionAllocator->Add (Vector (x_random, y_random, 1.5));
+  //   }
 
-  ueMobility.SetPositionAllocator(staPositionAllocator);
+  // ueMobility.SetPositionAllocator (staPositionAllocator);
+  ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+                                   "MinX", DoubleValue (166.0),
+                                   "MinY", DoubleValue (333.0),
+                                   "DeltaX", DoubleValue (166.0),
+                                   "DeltaY", DoubleValue (333.0),
+                                   "GridWidth", UintegerValue (5),
+                                   "LayoutType", StringValue ("RowFirst"));
   // ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
   //   "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
-  //   "Speed", StringValue("ns3::UniformRandomVariable[Min=50|Max=100]"));
-  // ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-  //                                "MinX", DoubleValue (0),
-  //                                "MinY", DoubleValue (0),
-  //                                "MaxX", DoubleValue (1000),
-  //                                "MaxY", DoubleValue (1000),
-  //                                "DeltaX", DoubleValue (100.0),
-  //                                "DeltaY", DoubleValue (10.0),
-  //                                "LayoutType", StringValue ("RowFirst"));
+  //   "Speed", StringValue("ns3::UniformRandomVariable[Min=10|Max=16]"));
   ueMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   ueMobility.Install (ueNodes);
   BuildingsHelper::Install(ueNodes);
-  
+    for (uint32_t i = 0; i < ueNodes.GetN (); i++)
+  {
+    Ptr<MobilityModel> model = ueNodes.Get (i)->GetObject<MobilityModel> ();
+    std::cout << "Node " << i << " Position " << model->GetPosition () << std::endl;
+  }
   int p[10][2] = {};
   deployEnb(p);
   for(int i = 0; i < gNbNum; i++)
@@ -1037,7 +1081,9 @@ main (int argc, char *argv[])
   tracefile1.open (tracefilename1, std::ios::out | std::ios::trunc);
   tracefile1 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
   tracefile1 << std::endl;
-
+  std::ofstream stateChange;
+  stateChange.open (stateChangefile, std::ios::out | std::ios::trunc);
+  stateChange << "Time,Old_state,New_state" << std::endl;
   std::fstream tracefile2;
   tracefile2.open (tracefilename2, std::ios::out | std::ios::trunc);
   tracefile2 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
@@ -1158,6 +1204,11 @@ main (int argc, char *argv[])
 
   Config::Connect ("/NodeList/*/DeviceList/*/ComponentCarrierMap/*/MmWaveEnbPhy/DlSpectrumPhy/RxPacketTraceEnb",
                    MakeCallback (&traceenbfunc));
+  Ptr<MmWaveUePhy> mmwaveUePhy = mcUeDevs.Get(8)->GetObject<McUeNetDevice> ()->GetMmWavePhy ();
+  Ptr<MmWaveSpectrumPhy> mmwaveDlSpectrumPhy = mmwaveUePhy->GetDlSpectrumPhy();
+  Ptr<MmWaveSpectrumPhy> mmwaveUlSpectrumPhy = mmwaveUePhy->GetUlSpectrumPhy ();
+  mmwaveDlSpectrumPhy->TraceConnectWithoutContext ("State", MakeCallback (&IntStateChange));
+  mmwaveUlSpectrumPhy->TraceConnectWithoutContext ("State", MakeCallback (&IntStateChange));
   AnimationInterface anim ("animation-dash-pensieve.xml");
 
   //Enable pdcp trace
