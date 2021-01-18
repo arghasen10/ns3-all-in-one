@@ -1,0 +1,12 @@
+Time,Event,IMSI,CellId,RNTI,TargetCellId
+0.033,ConnectionEstablishedUe,9,1,10,NA
+0.0449286,ConnectionEstablishedEnb,9,1,10,NA
+0.0657357,ConnectionEstablishedEnb,9,9,1,NA
+59.802,HandoverStartEnb,9,9,1,5
+59.806,HandoverEndOkEnb,9,5,1,NA
+63.9508,HandoverStartEnb,9,5,1,9
+63.9537,HandoverEndOkEnb,9,9,2,NA
+64.6384,HandoverStartEnb,9,9,2,5
+64.6412,HandoverEndOkEnb,9,5,2,NA
+64.8772,HandoverStartEnb,9,5,2,9
+64.881,HandoverEndOkEnb,9,9,3,NA
