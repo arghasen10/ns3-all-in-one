@@ -713,14 +713,14 @@ main (int argc, char *argv[])
   int mobilityType = 0;     //default without mobility
   double minSpeedVal = 0;   //default zero
   double maxSpeedVal = 0;   //default zero
-  int AbrPortVal = 8333;    //default 8333
+  // int AbrPortVal = 8333;    //default 8333
   // Command line arguments
   CommandLine cmd;
   cmd.AddValue("outputDir", "Output Directory for trace storing", outputDir);
   cmd.AddValue("MobilityType", "1 if With Mobility & 0 if Without Mobility", mobilityType);
   cmd.AddValue("MinSpeed", "Minimum Speed of the UE", minSpeedVal);
   cmd.AddValue("MaxSpeed", "Maximum Speed of the UE", maxSpeedVal);
-  cmd.AddValue("AbrPort", "Port to connect ABR proxy Server", AbrPortVal);
+  // cmd.AddValue("AbrPort", "Port to connect ABR proxy Server", AbrPortVal);
   cmd.Parse (argc, argv);
   
 
@@ -1137,21 +1137,18 @@ main (int argc, char *argv[])
   serverApps.Add (dashSrHelper.Install (remoteHost));
 
   int counter = 0;
-  DashClientHelper dlClient (internetIpIfaces.GetAddress (1), dlPort); //Remotehost is the second node, pgw is first
-  //dlClient.SetAttribute ("Size", UintegerValue (0xFFFFFF));
-  //dlClient.SetAttribute ("NumberOfDownload", UintegerValue (1));
+  DashHttpDownloadHelper dlClient (internetIpIfaces.GetAddress (1), dlPort); //Remotehost is the second node, pgw is first
+  dlClient.SetAttribute ("Size", UintegerValue (400000000));
+  dlClient.SetAttribute ("NumberOfDownload", UintegerValue (1));
   dlClient.SetAttribute ("OnStartCB",
                          CallbackValue (MakeBoundCallback (onStart, &counter)));
   dlClient.SetAttribute ("OnStopCB",
                          CallbackValue (MakeBoundCallback (onStop, &counter)));
   
-  dlClient.SetAttribute ("NodeTracePath", StringValue (outputDir + "/tracedashpensieve"));
+  dlClient.SetAttribute ("NodeTracePath", StringValue (outputDir + "/" + "tracedashpensieve"));
   dlClient.SetAttribute ("NodeTraceInterval", TimeValue (Seconds (nodeTraceInterval)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeCallback (readNodeTrace)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeBoundCallback (readNodeTrace, &mmWaveEnbNodes)));
-  dlClient.SetAttribute ("TracePath", StringValue (outputDir + "/TraceDataDashpensieve"));
-  dlClient.SetAttribute("AbrLogPath", StringValue (outputDir + "/AbrDataDashpensieve"));
-  dlClient.SetAttribute("AbrPort", UintegerValue(AbrPortVal));
 
   dlClient.SetAttribute ("Timeout", TimeValue(Seconds(-1)));
 
