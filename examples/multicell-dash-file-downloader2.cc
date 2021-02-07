@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "ns3/mmwave-helper.h"
+#include "ns3/trace-helper.h"
 #include "ns3/epc-helper.h"
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
@@ -31,6 +32,8 @@
 #include "ns3/config-store-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/mmwave-point-to-point-epc-helper.h"
+#include "ns3/mmwave-radio-energy-model-helper.h"
+#include "ns3/basic-energy-source-helper.h"
 #include "ns3/flow-monitor-module.h"
 //#include "ns3/gtk-config-store.h"
 #include <ns3/buildings-helper.h>
@@ -40,8 +43,6 @@
 #include "ns3/log.h"
 #include "ns3/internet-apps-module.h"
 #include "ns3/dash-helper.h"
-#include "ns3/mmwave-radio-energy-model-helper.h"
-#include "ns3/basic-energy-source-helper.h"
 #include <iostream>
 #include <ctime>
 #include <stdlib.h>
@@ -59,9 +60,38 @@ using namespace mmwave;
  * attaches one MC UE to both and starts a flow for the UE to and from a remote host.
  */
 
-NS_LOG_COMPONENT_DEFINE ("multicell");
+NS_LOG_COMPONENT_DEFINE ("dash");
 
+std::string outputDir = "";
+std::string handoverfilename = "/handover_dash_pensieve.csv";
+std::string tracefilename1 = "/dashtracefileuelargepensieve.csv";
+std::string tracefilename2 =  "/dashtracefileenblargepensieve.csv";
+std::string simfilename =  "/simulation_time_dash_pensieve.csv"; 
+std::string energyFileName =  "/energyfile.csv";
+std::string stateChangefile = "/stateChange.csv";
 
+void
+onStart (int *count)
+{
+  std::cout << "Starting at:" << Simulator::Now () << std::endl;
+  (*count)++;
+}
+void
+onStop (int *count)
+{
+  std::cout << "Stoping at:" << Simulator::Now () << std::endl;
+  (*count)--;
+  if (!(*count))
+    {
+      auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+      std::cout << "Simulation stopped at: " << ctime(&timenow) << std::endl;
+      std::fstream simtimefile;
+      simtimefile.open(outputDir + simfilename,std::ios::out | std::ios::app);
+      simtimefile << "Stop," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
+
+      Simulator::Stop ();
+    }
+}
 
 void
 PrintPosition (Ptr<Node> node)
@@ -207,39 +237,6 @@ static ns3::GlobalValue g_outageThreshold ("outageTh", "Outage threshold",
 static ns3::GlobalValue g_lteUplink ("lteUplink", "If true, always use LTE for uplink signalling",
                                      ns3::BooleanValue (false), ns3::MakeBooleanChecker ());
 
-std::string outputDir = "dashdownloader5";
-std::string handoverfilename = outputDir + "/handover_dash_downloader.csv";
-std::string tracefilename1 = outputDir + "/dashtracefileuelarge.csv";
-std::string tracefilename2 = outputDir + "/dashtracefileenblarge.csv";
-std::string simfilename = outputDir + "/simulation_time_dash.csv";
-std::string energyFileName = outputDir + "/energyfile.csv";
-std::string stateChangefile = outputDir + "/stateChange.csv";
-
-
-void
-onStart (int *count)
-{
-  std::cout << "Starting at:" << Simulator::Now () << std::endl;
-  (*count)++;
-}
-void
-onStop (int *count)
-{
-  std::cout << "Stoping at:" << Simulator::Now () << std::endl;
-  (*count)--;
-  if (!(*count))
-    {
-      auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-      std::cout << "Simulation stopped at: " << ctime(&timenow) << std::endl;
-      std::fstream simtimefile;
-      simtimefile.open(simfilename,std::ios::out | std::ios::app);
-      simtimefile << "Stop," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
-
-      Simulator::Stop ();
-    }
-}
-
-
 void
 NotifyConnectionEstablishedUe (std::string context,
                                uint64_t imsi,
@@ -249,7 +246,7 @@ NotifyConnectionEstablishedUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open( outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "ConnectionEstablishedUe" <<",";
     fileout << imsi << ",";
@@ -274,7 +271,7 @@ NotifyHandoverStartUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverStartUe" <<",";
     fileout << imsi << ",";
@@ -302,7 +299,7 @@ NotifyHandoverEndOkUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverEndOkUe" <<",";
     fileout << imsi << ",";
@@ -328,7 +325,7 @@ NotifyConnectionEstablishedEnb (std::string context,
   if (imsi==9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "ConnectionEstablishedEnb" <<",";
     fileout << imsi << ",";
@@ -356,7 +353,7 @@ NotifyHandoverStartEnb (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverStartEnb" <<",";
     fileout << imsi << ",";
@@ -382,7 +379,7 @@ NotifyHandoverEndOkEnb (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverEndOkEnb" <<",";
     fileout << imsi << ",";
@@ -404,7 +401,7 @@ void
 traceuefunc (std::string path, RxPacketTraceParams params)
 {
   std::fstream tracefile;
-  tracefile.open (tracefilename1, std::ios::out | std::ios::app);
+  tracefile.open (outputDir + tracefilename1, std::ios::out | std::ios::app);
 
   std::cout << "DL\t" << Simulator::Now ().GetSeconds () << "\t" 
                       << params.m_frameNum << "\t" << +params.m_sfNum << "\t" 
@@ -431,7 +428,8 @@ void
 traceenbfunc (std::string path, RxPacketTraceParams params)
 {
   std::fstream tracefile;
-  tracefile.open (tracefilename2, std::ios::out | std::ios::app);
+  
+  tracefile.open (outputDir + tracefilename2, std::ios::out | std::ios::app);
 
   std::cout << "UL\t" << Simulator::Now ().GetSeconds () << "\t" 
                       << params.m_frameNum << "\t" << +params.m_sfNum << "\t" 
@@ -467,7 +465,7 @@ storeFlowMonitor (Ptr<ns3::FlowMonitor> monitor,
   double averageFlowDelay = 0.0;
 
   std::ofstream outFile;
-  std::string filename = outputDir+"/default";
+  std::string filename = outputDir+ "/default";
   outFile.open (filename.c_str (), std::ofstream::out | std::ofstream::trunc);
   if (!outFile.is_open ())
     {
@@ -574,6 +572,7 @@ stream << "," << mModel->GetPosition ().x << "," << mModel->GetPosition ().y;
 
 Ptr<McUeNetDevice> netDevice; // = node->GetObject<MmWaveUeNetDevice>();
 //Ptr<ns3::McUeNetDevice> netDevice;
+
 for (uint32_t i = 0; i < node->GetNDevices (); i++)
 {
     std::cout << "\tNode: " << node->GetId () << ", Device " << i << ": "
@@ -631,7 +630,10 @@ for(uint32_t i = 0; i < gnbNodes->GetN(); i++)
     }
     
 }
+
 return stream.str ();
+  
+
 }
 
 void
@@ -670,7 +672,7 @@ IntStateChange (int32_t old_state, int32_t new_state)
     break;
   }
 std::ofstream outFile;
-  outFile.open (stateChangefile, std::ios::out | std::ios::app);
+  outFile.open (outputDir + stateChangefile, std::ios::out | std::ios::app);
   outFile << Simulator::Now().GetNanoSeconds () << "," << old_state_val << "," << new_state_val << std::endl;
 }
 
@@ -680,10 +682,19 @@ EnergyConsumptionUpdate (double totaloldEnergyConsumption, double totalnewEnergy
   std::cout << "Total Energy Consumption " << totalnewEnergyConsumption << "J" << std::endl;
   Time currentTime = Simulator::Now ();
 std::ofstream outFile;
-  outFile.open (energyFileName, std::ios::out | std::ios::app);
+  outFile.open (outputDir + energyFileName, std::ios::out | std::ios::app);
   outFile << currentTime.GetNanoSeconds () << "," << totalnewEnergyConsumption << "," << (totalnewEnergyConsumption-totaloldEnergyConsumption) << std::endl;
 }
 
+
+bool
+isDir (std::string path)
+{
+  struct stat statbuf;
+  if (stat (path.c_str (), &statbuf) != 0)
+    return false;
+  return S_ISDIR(statbuf.st_mode);
+}
 
 
 int
@@ -691,15 +702,33 @@ main (int argc, char *argv[])
 {
   bool harqEnabled = true;
   bool fixedTti = false;
+  // unsigned symPerSf = 24;
+  // double sfPeriod = 100.0;
 
   std::list<Box>  m_previousBlocks;
-  std::string nodeTraceFile = "tracehighspeedlarge";
   double nodeTraceInterval = 1;
+  
   double udpAppStartTime = 0.4; //seconds
 
+  int mobilityType = 0;     //default without mobility
+  double minSpeedVal = 0;   //default zero
+  double maxSpeedVal = 0;   //default zero
+  int AbrPortVal = 8333;    //default 8333
   // Command line arguments
   CommandLine cmd;
+  cmd.AddValue("outputDir", "Output Directory for trace storing", outputDir);
+  cmd.AddValue("MobilityType", "1 if With Mobility & 0 if Without Mobility", mobilityType);
+  cmd.AddValue("MinSpeed", "Minimum Speed of the UE", minSpeedVal);
+  cmd.AddValue("MaxSpeed", "Maximum Speed of the UE", maxSpeedVal);
+  cmd.AddValue("AbrPort", "Port to connect ABR proxy Server", AbrPortVal);
   cmd.Parse (argc, argv);
+  
+
+  if (!isDir (outputDir))
+    {
+      mkdir (outputDir.c_str (), S_IRWXU);
+    }
+
 
   UintegerValue uintegerValue;
   BooleanValue booleanValue;
@@ -774,19 +803,19 @@ main (int argc, char *argv[])
   strftime (buffer,80,"%d_%m_%Y_%I_%M_%S",timeinfo);
   std::string time_str (buffer);
 
-Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnabled));
+  Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnabled));
   Config::SetDefault ("ns3::MmWaveHelper::HarqEnabled", BooleanValue (harqEnabled));
   Config::SetDefault ("ns3::MmWaveFlexTtiMacScheduler::HarqEnabled", BooleanValue (harqEnabled));
   Config::SetDefault ("ns3::MmWaveFlexTtiMaxWeightMacScheduler::HarqEnabled", BooleanValue (harqEnabled));
   Config::SetDefault ("ns3::MmWaveFlexTtiMaxWeightMacScheduler::FixedTti", BooleanValue (fixedTti));
   Config::SetDefault ("ns3::MmWaveFlexTtiMaxWeightMacScheduler::SymPerSlot", UintegerValue (6));
-  //Config::SetDefault ("ns3::MmWavePhyMacCommon::ResourceBlockNum", UintegerValue (1));
-  //Config::SetDefault ("ns3::MmWavePhyMacCommon::ChunkPerRB", UintegerValue (72));
-  //Config::SetDefault ("ns3::MmWavePhyMacCommon::SymbolsPerSubframe", UintegerValue (symPerSf));
-  //Config::SetDefault ("ns3::MmWavePhyMacCommon::SubframePeriod", DoubleValue (sfPeriod));
+  // Config::SetDefault ("ns3::MmWavePhyMacCommon::ResourceBlockNum", UintegerValue (1));
+  // Config::SetDefault ("ns3::MmWavePhyMacCommon::ChunkPerRB", UintegerValue (72));
+  // Config::SetDefault ("ns3::MmWavePhyMacCommon::SymbolsPerSubframe", UintegerValue (symPerSf));
+  // Config::SetDefault ("ns3::MmWavePhyMacCommon::SubframePeriod", DoubleValue (sfPeriod));
   Config::SetDefault ("ns3::MmWavePhyMacCommon::TbDecodeLatency", UintegerValue (200.0));
   Config::SetDefault ("ns3::MmWavePhyMacCommon::NumHarqProcess", UintegerValue (100));
-  //Config::SetDefault ("ns3::MmWaveBeamforming::LongTermUpdatePeriod", TimeValue (MilliSeconds (100.0)));
+  // Config::SetDefault ("ns3::MmWaveBeamforming::LongTermUpdatePeriod", TimeValue (MilliSeconds (100.0)));
   Config::SetDefault ("ns3::LteEnbRrc::SystemInformationPeriodicity", TimeValue (MilliSeconds (5.0)));
   Config::SetDefault ("ns3::LteRlcAm::ReportBufferStatusTimer", TimeValue (MicroSeconds (100.0)));
   Config::SetDefault ("ns3::LteRlcUmLowLat::ReportBufferStatusTimer", TimeValue (MicroSeconds (100.0)));
@@ -830,24 +859,24 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
   std::cout << "Lte uplink " << lteUplink << "\n";
 
   // settings for the 3GPP the channel
-  //Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::ChannelCondition", StringValue ("a"));
-  //Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::Scenario", StringValue ("UMi-StreetCanyon"));
-  //Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::OptionalNlos", BooleanValue (true));
-  //Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::Shadowing", BooleanValue (true)); // enable or disable the shadowing effect
-  //Config::SetDefault ("ns3::MmWave3gppBuildingsPropagationLossModel::UpdateCondition", BooleanValue (true)); // enable or disable the LOS/NLOS update when the UE moves
-  //Config::SetDefault ("ns3::AntennaArrayModel::AntennaHorizontalSpacing", DoubleValue (0.5));
-  //Config::SetDefault ("ns3::AntennaArrayModel::AntennaVerticalSpacing", DoubleValue (0.5));
-  //Config::SetDefault ("ns3::MmWave3gppChannel::UpdatePeriod", TimeValue (MilliSeconds (1000))); // interval after which the channel for a moving user is updated,
+  // Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::ChannelCondition", StringValue ("a"));
+  // Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::Scenario", StringValue ("UMi-StreetCanyon"));
+  // Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::OptionalNlos", BooleanValue (true));
+  // Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::Shadowing", BooleanValue (true)); // enable or disable the shadowing effect
+  // Config::SetDefault ("ns3::MmWave3gppBuildingsPropagationLossModel::UpdateCondition", BooleanValue (true)); // enable or disable the LOS/NLOS update when the UE moves
+  // Config::SetDefault ("ns3::AntennaArrayModel::AntennaHorizontalSpacing", DoubleValue (0.5));
+  // Config::SetDefault ("ns3::AntennaArrayModel::AntennaVerticalSpacing", DoubleValue (0.5));
+  // Config::SetDefault ("ns3::MmWave3gppChannel::UpdatePeriod", TimeValue (MilliSeconds (1000))); // interval after which the channel for a moving user is updated,
   
-   // with spatial consistency procedure. If 0, spatial consistency is not used
-  //Config::SetDefault ("ns3::MmWave3gppChannel::DirectBeam", BooleanValue (true)); // Set true to perform the beam in the exact direction of receiver node.
-  //Config::SetDefault ("ns3::MmWave3gppChannel::Blockage", BooleanValue (true)); // use blockage or not
-  //Config::SetDefault ("ns3::MmWave3gppChannel::PortraitMode", BooleanValue (true)); // use blockage model with UT in portrait mode
-  //Config::SetDefault ("ns3::MmWave3gppChannel::NumNonselfBlocking", IntegerValue (4)); // number of non-self blocking obstacles
+  //  // with spatial consistency procedure. If 0, spatial consistency is not used
+  // Config::SetDefault ("ns3::MmWave3gppChannel::DirectBeam", BooleanValue (true)); // Set true to perform the beam in the exact direction of receiver node.
+  // Config::SetDefault ("ns3::MmWave3gppChannel::Blockage", BooleanValue (true)); // use blockage or not
+  // Config::SetDefault ("ns3::MmWave3gppChannel::PortraitMode", BooleanValue (true)); // use blockage model with UT in portrait mode
+  // Config::SetDefault ("ns3::MmWave3gppChannel::NumNonselfBlocking", IntegerValue (4)); // number of non-self blocking obstacles
 
   // set the number of antennas in the devices
-  Config::SetDefault ("ns3::McUeNetDevice::AntennaNum", UintegerValue(16));
-  //Config::SetDefault ("ns3::MmWaveEnbNetDevice::AntennaNum", UintegerValue(64));
+  Config::SetDefault ("ns3::McUeNetDevice::AntennaNum", UintegerValue(4));
+  // Config::SetDefault ("ns3::MmWaveEnbNetDevice::AntennaNum", UintegerValue(16));
 
   Ptr<MmWaveHelper> mmwaveHelper = CreateObject<MmWaveHelper> ();
   // if (true)
@@ -856,23 +885,19 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
   //   }
   // else
   //   {
-      
+  //     mmwaveHelper->SetAttribute ("PathlossModel", StringValue ("ns3::MmWave3gppPropagationLossModel"));
   //   }
-  //mmwaveHelper->SetAttribute ("PathlossModel", StringValue ("ns3::MmWave3gppPropagationLossModel"));
-  //mmwaveHelper->SetAttribute ("ChannelModel", StringValue ("ns3::MmWave3gppChannel"));
-
+  // mmwaveHelper->SetAttribute ("ChannelModel", StringValue ("ns3::MmWave3gppChannel"));
 
   //Ptr<MmWaveHelper> mmwaveHelper = CreateObject<MmWaveHelper> ();
   //mmwaveHelper->SetSchedulerType ("ns3::MmWaveFlexTtiMaxWeightMacScheduler");
   Ptr<MmWavePointToPointEpcHelper> epcHelper = CreateObject<MmWavePointToPointEpcHelper> ();
   mmwaveHelper->SetEpcHelper (epcHelper);
   mmwaveHelper->SetHarqEnabled (harqEnabled);
+  mmwaveHelper->SetMmWaveUeNetDeviceAttribute("AntennaNum", UintegerValue(4));
+  mmwaveHelper->SetMmWaveEnbNetDeviceAttribute("AntennaNum", UintegerValue(16));
 //  mmwaveHelper->SetAttribute ("PathlossModel", StringValue ("ns3::BuildingsObstaclePropagationLossModel"));
   mmwaveHelper->Initialize ();
-
-
-  // parse again so you can override default values from the command line
-  cmd.Parse (argc, argv);
 
   // Get SGW/PGW and create a single RemoteHost
   Ptr<Node> mme = epcHelper->GetMmeNode ();
@@ -932,49 +957,49 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
 
  
   //Generate Buildings 
-  std::vector<Ptr<Building> > buildingVector;
+  //std::vector<Ptr<Building> > buildingVector;
 
-  double maxBuildingSize = 30;
-  double  maxXaxis = 640, maxYaxis = 370, minxAxis = 340, minYaxis = 310;
+  //double maxBuildingSize = 30;
+  //double  maxXaxis = 640, maxYaxis = 370, minxAxis = 340, minYaxis = 310;
 
-  for(uint32_t buildingindex = 0; buildingindex < 8; buildingindex++)
-  {
-      Ptr < Building > building = Create<Building> ();
+  //for(uint32_t buildingindex = 0; buildingindex < 8; buildingindex++)
+  //{
+    //  Ptr < Building > building = Create<Building> ();
 
-      std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (minxAxis, minYaxis, 
-                maxXaxis, maxYaxis, maxBuildingSize, m_previousBlocks);
-      m_previousBlocks = std::get<1> (pairBuildings);
-      Box box = std::get<0> (pairBuildings);
-      Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
-      randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
-      randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
-      double buildingHeight = randomBuildingZ->GetValue ();
+      //std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (minxAxis, minYaxis, 
+        //        maxXaxis, maxYaxis, maxBuildingSize, m_previousBlocks);
+      //m_previousBlocks = std::get<1> (pairBuildings);
+//      Box box = std::get<0> (pairBuildings);
+  //    Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
+    //  randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
+      //randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
+      //double buildingHeight = randomBuildingZ->GetValue ();
 
-      building->SetBoundaries (Box (box.xMin, box.xMax,
-                                    box.yMin,  box.yMax,
-                                    0.0, buildingHeight));
+      //building->SetBoundaries (Box (box.xMin, box.xMax,
+   //                                 box.yMin,  box.yMax,
+///                                    0.0, buildingHeight));
       
-      buildingVector.push_back (building);
-  }
-  maxXaxis = 640, maxYaxis = 720, minxAxis = 340, minYaxis = 650;
-    for(uint32_t buildingindex = 0; buildingindex < 8; buildingindex++)
-  {
-      Ptr < Building > building = Create<Building> ();
+     // buildingVector.push_back (building);
+//  }
+ // maxXaxis = 640, maxYaxis = 720, minxAxis = 340, minYaxis = 650;
+  //  for(uint32_t buildingindex = 0; buildingindex < 8; /buildingindex++)
+//  {
+      //Ptr < Building > building = Create<Building> ();
 
-      std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (340, 650, 
-                640, 720, maxBuildingSize, m_previousBlocks);
-      m_previousBlocks = std::get<1> (pairBuildings);
-      Box box = std::get<0> (pairBuildings);
-      Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
-      randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
-      randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
-      double buildingHeight = randomBuildingZ->GetValue ();
+ //     std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (340, 650, 
+   //             640, 720, maxBuildingSize, m_previousBlocks);
+    //  m_previousBlocks = std::get<1> (pairBuildings);
+      //Box box = std::get<0> (pairBuildings);
+      //Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
+      //randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
+      //randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
+      //double buildingHeight = randomBuildingZ->GetValue ();
 
-      building->SetBoundaries (Box (box.xMin, box.xMax,
-                                    box.yMin,  box.yMax,
-                                    0.0, buildingHeight));
-      buildingVector.push_back (building);
-  }
+      //building->SetBoundaries (Box (box.xMin, box.xMax,
+        //                            box.yMin,  box.yMax,
+          //                          0.0, buildingHeight));
+      //buildingVector.push_back (building);
+ // }
   
 
 
@@ -982,52 +1007,37 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
   Ptr<ListPositionAllocator> ltepositionAloc = CreateObject<ListPositionAllocator> ();
     
   Ptr<ListPositionAllocator> apPositionAlloc = CreateObject<ListPositionAllocator> ();
-  // Ptr<ListPositionAllocator> staPositionAllocator = CreateObject<ListPositionAllocator> ();
-
-  Ptr<ListPositionAllocator> staPositionAllocator = CreateObject<ListPositionAllocator> ();
-  // ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-  //                                  "MinX", DoubleValue (166.0),
-  //                                  "MinY", DoubleValue (333.0),
-  //                                  "DeltaX", DoubleValue (166.0),
-  //                                  "DeltaY", DoubleValue (333.0),
-  //                                  "GridWidth", UintegerValue (5),
-  //                                  "LayoutType", StringValue ("RowFirst"));
-  // // staPositionAllocator->Add (Vector (248,248,1.5));
-  // staPositionAllocator->Add (Vector (502,248,1.5));
-  // staPositionAllocator->Add (Vector (752,252,1.5));
-  // staPositionAllocator->Add (Vector (202,502,1.5));
-  // staPositionAllocator->Add (Vector (402,506,1.5));
-  // staPositionAllocator->Add (Vector (610,509,1.5));
-  // staPositionAllocator->Add (Vector (815,514,1.5));
-  // staPositionAllocator->Add (Vector (259,754,1.5));
-  // staPositionAllocator->Add (Vector (509,758,1.5));
-  // staPositionAllocator->Add (Vector (759,758,1.5));
-  double x_random, y_random;
-  for(uint32_t i = 0; i < ueNodes.GetN(); i ++)
+  if(mobilityType == 0)
+    {
+      ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+                                       "MinX", DoubleValue (166.0),
+                                       "MinY", DoubleValue (333.0),
+                                       "DeltaX", DoubleValue (166.0),
+                                       "DeltaY", DoubleValue (333.0),
+                                       "GridWidth", UintegerValue (5),
+                                       "LayoutType", StringValue ("RowFirst"));
+      ueMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+    }
+  else if (mobilityType == 1)
   {
-    x_random = (rand() % 1000) + 1;
-    y_random = (rand() % 1000) + 1;
-    staPositionAllocator->Add (Vector (x_random, y_random, 1.5));
+    Ptr<ListPositionAllocator> staPositionAllocator = CreateObject<ListPositionAllocator> ();
+    double x_random, y_random;
+    for(uint32_t i = 0; i < ueNodes.GetN(); i ++)
+    {
+      x_random = (rand() % 1000) + 1;
+      y_random = (rand() % 1000) + 1;
+      staPositionAllocator->Add (Vector (x_random, y_random, 1.5));
+    }
+    ueMobility.SetPositionAllocator(staPositionAllocator);
+    ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
+      "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
+      "Speed", StringValue("ns3::UniformRandomVariable[Min=" + std::to_string(minSpeedVal) + "|Max=" + std::to_string(maxSpeedVal) + "]"));
   }
-
-
-  ueMobility.SetPositionAllocator(staPositionAllocator);
-  ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-    "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
-    "Speed", StringValue("ns3::UniformRandomVariable[Min=2|Max=16]"));
-  // ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-  //                                "MinX", DoubleValue (0),
-  //                                "MinY", DoubleValue (0),
-  //                                "MaxX", DoubleValue (1000),
-  //                                "MaxY", DoubleValue (1000),
-  //                                "DeltaX", DoubleValue (100.0),
-  //                                "DeltaY", DoubleValue (10.0),
-  //                                "LayoutType", StringValue ("RowFirst"));
-  // ueMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  ueMobility.Install (ueNodes);
-  BuildingsHelper::Install(ueNodes);
   
-  for (uint32_t i = 0; i < ueNodes.GetN (); i++)
+  
+  ueMobility.Install (ueNodes);
+  //BuildingsHelper::Install(ueNodes);
+    for (uint32_t i = 0; i < ueNodes.GetN (); i++)
   {
     Ptr<MobilityModel> model = ueNodes.Get (i)->GetObject<MobilityModel> ();
     std::cout << "Node " << i << " Position " << model->GetPosition () << std::endl;
@@ -1047,7 +1057,7 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
   gNbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   gNbMobility.SetPositionAllocator (apPositionAlloc);
   gNbMobility.Install (mmWaveEnbNodes);
-  BuildingsHelper::Install(allEnbNodes);
+  //BuildingsHelper::Install(allEnbNodes);
   
   AnimationInterface::SetConstantPosition(mme,580,580);
   AnimationInterface::SetConstantPosition(pgw,640,580);
@@ -1084,30 +1094,26 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
 
    //Handover store in file
   std::fstream fileout;
-  fileout.open(handoverfilename,std::ios::out | std::ios::trunc);
+  fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::trunc);
   fileout << "Time,Event,IMSI,CellId,RNTI,TargetCellId";
   fileout << std::endl; 
-  std::ofstream stateChange;
-  stateChange.open (stateChangefile, std::ios::out | std::ios::trunc);
-  stateChange << "Time,Old_state,New_state" << std::endl;
+
+  std::cout << "outputDir: " << outputDir << std::endl;
   //MCS and other rxtrace report file
   std::fstream tracefile1;
-  tracefile1.open (tracefilename1, std::ios::out | std::ios::trunc);
+  tracefile1.open (outputDir + tracefilename1, std::ios::out | std::ios::trunc);
   tracefile1 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
   tracefile1 << std::endl;
-
+  std::ofstream stateChange;
+  stateChange.open (outputDir + stateChangefile, std::ios::out | std::ios::trunc);
+  stateChange << "Time,Old_state,New_state" << std::endl;
   std::fstream tracefile2;
-  tracefile2.open (tracefilename2, std::ios::out | std::ios::trunc);
+  tracefile2.open (outputDir + tracefilename2, std::ios::out | std::ios::trunc);
   tracefile2 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
   tracefile2 << std::endl;
-
   std::ofstream energyFile;
-  energyFile.open (energyFileName,std::ios::out | std::ios::trunc);
+  energyFile.open (outputDir + energyFileName,std::ios::out | std::ios::trunc);
   energyFile << "Time,EnergyConsumption,StateEnergy" << std::endl;
-  // Install and start applications on UEs and remote host
-  uint16_t dlPort = 1234;
-  ApplicationContainer clientApps, serverApps;
-
   /*Energy Framework*/
   BasicEnergySourceHelper basicSourceHelper;
   basicSourceHelper.Set ("BasicEnergySourceInitialEnergyJ", DoubleValue (10));
@@ -1120,6 +1126,10 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
   DeviceEnergyModelContainer deviceEnergyModel = nrEnergyHelper.Install (ueNodes.Get(8)->GetDevice (0), sources);
   //Install and start applications on UEs and remote host
   deviceEnergyModel.Get(0)->TraceConnectWithoutContext ("TotalEnergyConsumption", MakeCallback (&EnergyConsumptionUpdate));
+  // Install and start applications on UEs and remote host
+  uint16_t dlPort = 1234;
+  ApplicationContainer clientApps, serverApps;
+
 
   //	ApplicationContainer clientAppsEmbb, serverAppsEmbb;
 
@@ -1127,21 +1137,21 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
   serverApps.Add (dashSrHelper.Install (remoteHost));
 
   int counter = 0;
-  DashHttpDownloadHelper dlClient (internetIpIfaces.GetAddress (1), dlPort); //Remotehost is the second node, pgw is first
-  dlClient.SetAttribute ("Size", UintegerValue (400000000));
-  dlClient.SetAttribute ("NumberOfDownload", UintegerValue (1));
+  DashClientHelper dlClient (internetIpIfaces.GetAddress (1), dlPort); //Remotehost is the second node, pgw is first
+  //dlClient.SetAttribute ("Size", UintegerValue (0xFFFFFF));
+  //dlClient.SetAttribute ("NumberOfDownload", UintegerValue (1));
   dlClient.SetAttribute ("OnStartCB",
                          CallbackValue (MakeBoundCallback (onStart, &counter)));
   dlClient.SetAttribute ("OnStopCB",
                          CallbackValue (MakeBoundCallback (onStop, &counter)));
   
-  dlClient.SetAttribute ("NodeTracePath", StringValue (outputDir + "/" + nodeTraceFile));
+  dlClient.SetAttribute ("NodeTracePath", StringValue (outputDir + "/tracedashpensieve"));
   dlClient.SetAttribute ("NodeTraceInterval", TimeValue (Seconds (nodeTraceInterval)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeCallback (readNodeTrace)));
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeBoundCallback (readNodeTrace, &mmWaveEnbNodes)));
-  // dlClient.SetAttribute ("TracePath", StringValue (outputDir + "/TraceData"));
-  // dlClient.SetAttribute("AbrLogPath", StringValue (outputDir + "/AbrData"));
-
+  dlClient.SetAttribute ("TracePath", StringValue (outputDir + "/TraceDataDashpensieve"));
+  dlClient.SetAttribute("AbrLogPath", StringValue (outputDir + "/AbrDataDashpensieve"));
+  dlClient.SetAttribute("AbrPort", UintegerValue(AbrPortVal));
 
   dlClient.SetAttribute ("Timeout", TimeValue(Seconds(-1)));
 
@@ -1152,7 +1162,7 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
   // configure here UDP traffic
   for (uint32_t j = 0; j < ueNodes.GetN (); j++)
   {
-    std::cout <<"Ip Address of node "<<ueNodes.Get(j)->GetId()<<" "<<ueNodes.Get(j)->GetObject<Ipv4>()->GetAddress(1,0).GetLocal()<<std::endl;
+    std::cout <<"Ip Address of node "<<ueNodes.Get(j)->GetId()<<" "<<ueNodes.Get(j)->GetObject<Ipv4>()->GetAddress(1,0)<<std::endl;
   }
   std::cout<<"Ip Address of remoteHost "<<internetIpIfaces.GetAddress(1)<<std::endl;
   
@@ -1180,6 +1190,7 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
      
     }
   // start UDP server and client apps
+  
   serverApps.Start (Seconds (udpAppStartTime));
   clientApps.Start (Seconds (udpAppStartTime + 0.5));
 
@@ -1189,10 +1200,10 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
       Simulator::Schedule (Seconds (i * simTime / numPrints), &PrintPosition, ueNodes.Get (0));
     }
   //TODO  SIGSEGV ERROR
-  for (size_t i = 0; i < buildingVector.size(); i++)
-  {
-    MobilityBuildingInfo (buildingVector[i]);
-  }
+  //for (size_t i = 0; i < buildingVector.size(); i++)
+//  {
+  //  MobilityBuildingInfo (buildingVector[i]);
+ // }
 
   //BuildingsHelper::MakeMobilityModelConsistent ();
   //Simulator::Stop (Seconds (simTime));
@@ -1221,9 +1232,10 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
   Ptr<MmWaveSpectrumPhy> mmwaveUlSpectrumPhy = mmwaveUePhy->GetUlSpectrumPhy ();
   mmwaveDlSpectrumPhy->TraceConnectWithoutContext ("State", MakeCallback (&IntStateChange));
   mmwaveUlSpectrumPhy->TraceConnectWithoutContext ("State", MakeCallback (&IntStateChange));
-  AnimationInterface anim ("animation-multi-enbs-dash-file-dn.xml");
+  AnimationInterface anim ("animation-dash-pensieve.xml");
 
   //Enable pdcp trace
+  
   mmwaveHelper->EnablePdcpTraces ();
 
   for (uint32_t i = 0; i < lteEnbNodes.GetN(); i++)
@@ -1244,26 +1256,26 @@ Config::SetDefault ("ns3::MmWaveHelper::RlcAmEnabled", BooleanValue (rlcAmEnable
   anim.UpdateNodeDescription(pgw,"PGW");
   anim.UpdateNodeDescription(mme,"MME");
   anim.UpdateNodeDescription(remoteHostContainer.Get(0),"Remote Host");
-  p2ph.EnablePcapAll ("multicell-stat-dash-file-downloader");
+  // p2ph.EnablePcapAll ("multicell-stat-dash");
+  // auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  // tm *ltm = localtime(&timenow);
+  // std::stringstream pcapFileName;
+  // pcapFileName << "multicell-stat-dash" << ltm->tm_year << ltm->;
+  // PcapHelperForDevice::EnablePcap(pcapFileName.str(), ueNodes.Get(8));
+  std::cout << "outputDir : " << outputDir << std::endl;
   auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   std::cout << "Simulation started at: " << ctime(&timenow) << std::endl; 
   std::fstream simtimefile;
-  simtimefile.open(simfilename,std::ios::out | std::ios::trunc);
+  simtimefile.open(outputDir + simfilename,std::ios::out | std::ios::trunc);
   simtimefile << "Type,Simulation Time,RealTime" << std::endl;
   simtimefile << "Start," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
 
   Simulator::Run ();
-  FlowMonitorHelper flowmonHelper;
+  
   NodeContainer endpointNodes;
   endpointNodes.Add (remoteHost);
   endpointNodes.Add (ueNodes);
 
-  Ptr<ns3::FlowMonitor> monitor = flowmonHelper.Install (endpointNodes);
-  monitor->SetAttribute ("DelayBinWidth", DoubleValue (0.001));
-  monitor->SetAttribute ("JitterBinWidth", DoubleValue (0.001));
-  monitor->SetAttribute ("PacketSizeBinWidth", DoubleValue (20));
-
-  storeFlowMonitor (monitor, flowmonHelper);
   Simulator::Destroy ();
   return 0;
 }
