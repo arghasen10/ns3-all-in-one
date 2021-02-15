@@ -1,0 +1,2 @@
+#time,nodeid,segNum,lastChunkSize,lastChunkStartTime,lastChunkFinishTime,bufferUpto,totalRebuffer,lastQuality,currentRebuffer
++2281485713.0ns,22,0,693362,1.40075,2.28149,4,0,0,0
