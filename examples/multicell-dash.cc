@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "ns3/mmwave-helper.h"
+#include "ns3/trace-helper.h"
 #include "ns3/epc-helper.h"
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
@@ -61,13 +62,13 @@ using namespace mmwave;
 
 NS_LOG_COMPONENT_DEFINE ("dash");
 
-std::string outputDir = "multicellDashStatbola9";
-std::string handoverfilename = outputDir + "/handover_dash_pensieve.csv";
-std::string tracefilename1 = outputDir + "/dashtracefileuelargepensieve.csv";
-std::string tracefilename2 = outputDir + "/dashtracefileenblargepensieve.csv";
-std::string simfilename = outputDir + "/simulation_time_dash_pensieve.csv"; 
-std::string energyFileName = outputDir + "/energyfile.csv";
-std::string stateChangefile = outputDir + "/stateChange.csv";
+std::string outputDir = "";
+std::string handoverfilename = "/handover_dash_pensieve.csv";
+std::string tracefilename1 = "/dashtracefileuelargepensieve.csv";
+std::string tracefilename2 =  "/dashtracefileenblargepensieve.csv";
+std::string simfilename =  "/simulation_time_dash_pensieve.csv"; 
+std::string energyFileName =  "/energyfile.csv";
+std::string stateChangefile = "/stateChange.csv";
 
 void
 onStart (int *count)
@@ -85,7 +86,7 @@ onStop (int *count)
       auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
       std::cout << "Simulation stopped at: " << ctime(&timenow) << std::endl;
       std::fstream simtimefile;
-      simtimefile.open(simfilename,std::ios::out | std::ios::app);
+      simtimefile.open(outputDir + simfilename,std::ios::out | std::ios::app);
       simtimefile << "Stop," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
 
       Simulator::Stop ();
@@ -245,7 +246,7 @@ NotifyConnectionEstablishedUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open( outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "ConnectionEstablishedUe" <<",";
     fileout << imsi << ",";
@@ -270,7 +271,7 @@ NotifyHandoverStartUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverStartUe" <<",";
     fileout << imsi << ",";
@@ -298,7 +299,7 @@ NotifyHandoverEndOkUe (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverEndOkUe" <<",";
     fileout << imsi << ",";
@@ -324,7 +325,7 @@ NotifyConnectionEstablishedEnb (std::string context,
   if (imsi==9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "ConnectionEstablishedEnb" <<",";
     fileout << imsi << ",";
@@ -352,7 +353,7 @@ NotifyHandoverStartEnb (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverStartEnb" <<",";
     fileout << imsi << ",";
@@ -378,7 +379,7 @@ NotifyHandoverEndOkEnb (std::string context,
   if (imsi == 9)
   {
     std::fstream fileout;
-    fileout.open(handoverfilename,std::ios::out | std::ios::app);
+    fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::app);
     fileout << Simulator::Now().GetSeconds() <<",";
     fileout << "HandoverEndOkEnb" <<",";
     fileout << imsi << ",";
@@ -400,7 +401,7 @@ void
 traceuefunc (std::string path, RxPacketTraceParams params)
 {
   std::fstream tracefile;
-  tracefile.open (tracefilename1, std::ios::out | std::ios::app);
+  tracefile.open (outputDir + tracefilename1, std::ios::out | std::ios::app);
 
   std::cout << "DL\t" << Simulator::Now ().GetSeconds () << "\t" 
                       << params.m_frameNum << "\t" << +params.m_sfNum << "\t" 
@@ -428,7 +429,7 @@ traceenbfunc (std::string path, RxPacketTraceParams params)
 {
   std::fstream tracefile;
   
-  tracefile.open (tracefilename2, std::ios::out | std::ios::app);
+  tracefile.open (outputDir + tracefilename2, std::ios::out | std::ios::app);
 
   std::cout << "UL\t" << Simulator::Now ().GetSeconds () << "\t" 
                       << params.m_frameNum << "\t" << +params.m_sfNum << "\t" 
@@ -671,7 +672,7 @@ IntStateChange (int32_t old_state, int32_t new_state)
     break;
   }
 std::ofstream outFile;
-  outFile.open (stateChangefile, std::ios::out | std::ios::app);
+  outFile.open (outputDir + stateChangefile, std::ios::out | std::ios::app);
   outFile << Simulator::Now().GetNanoSeconds () << "," << old_state_val << "," << new_state_val << std::endl;
 }
 
@@ -681,9 +682,20 @@ EnergyConsumptionUpdate (double totaloldEnergyConsumption, double totalnewEnergy
   std::cout << "Total Energy Consumption " << totalnewEnergyConsumption << "J" << std::endl;
   Time currentTime = Simulator::Now ();
 std::ofstream outFile;
-  outFile.open (energyFileName, std::ios::out | std::ios::app);
+  outFile.open (outputDir + energyFileName, std::ios::out | std::ios::app);
   outFile << currentTime.GetNanoSeconds () << "," << totalnewEnergyConsumption << "," << (totalnewEnergyConsumption-totaloldEnergyConsumption) << std::endl;
 }
+
+
+bool
+isDir (std::string path)
+{
+  struct stat statbuf;
+  if (stat (path.c_str (), &statbuf) != 0)
+    return false;
+  return S_ISDIR(statbuf.st_mode);
+}
+
 
 int
 main (int argc, char *argv[])
@@ -695,11 +707,28 @@ main (int argc, char *argv[])
 
   std::list<Box>  m_previousBlocks;
   double nodeTraceInterval = 1;
+  
   double udpAppStartTime = 0.4; //seconds
 
+  int mobilityType = 0;     //default without mobility
+  double minSpeedVal = 0;   //default zero
+  double maxSpeedVal = 0;   //default zero
+  int AbrPortVal = 8333;    //default 8333
   // Command line arguments
   CommandLine cmd;
+  cmd.AddValue("outputDir", "Output Directory for trace storing", outputDir);
+  cmd.AddValue("MobilityType", "1 if With Mobility & 0 if Without Mobility", mobilityType);
+  cmd.AddValue("MinSpeed", "Minimum Speed of the UE", minSpeedVal);
+  cmd.AddValue("MaxSpeed", "Maximum Speed of the UE", maxSpeedVal);
+  cmd.AddValue("AbrPort", "Port to connect ABR proxy Server", AbrPortVal);
   cmd.Parse (argc, argv);
+  
+
+  if (!isDir (outputDir))
+    {
+      mkdir (outputDir.c_str (), S_IRWXU);
+    }
+
 
   UintegerValue uintegerValue;
   BooleanValue booleanValue;
@@ -846,8 +875,8 @@ main (int argc, char *argv[])
   // Config::SetDefault ("ns3::MmWave3gppChannel::NumNonselfBlocking", IntegerValue (4)); // number of non-self blocking obstacles
 
   // set the number of antennas in the devices
-  Config::SetDefault ("ns3::McUeNetDevice::AntennaNum", UintegerValue(16));
-  // Config::SetDefault ("ns3::MmWaveEnbNetDevice::AntennaNum", UintegerValue(64));
+  Config::SetDefault ("ns3::McUeNetDevice::AntennaNum", UintegerValue(4));
+  // Config::SetDefault ("ns3::MmWaveEnbNetDevice::AntennaNum", UintegerValue(16));
 
   Ptr<MmWaveHelper> mmwaveHelper = CreateObject<MmWaveHelper> ();
   // if (true)
@@ -865,12 +894,10 @@ main (int argc, char *argv[])
   Ptr<MmWavePointToPointEpcHelper> epcHelper = CreateObject<MmWavePointToPointEpcHelper> ();
   mmwaveHelper->SetEpcHelper (epcHelper);
   mmwaveHelper->SetHarqEnabled (harqEnabled);
+  mmwaveHelper->SetMmWaveUeNetDeviceAttribute("AntennaNum", UintegerValue(4));
+  mmwaveHelper->SetMmWaveEnbNetDeviceAttribute("AntennaNum", UintegerValue(16));
 //  mmwaveHelper->SetAttribute ("PathlossModel", StringValue ("ns3::BuildingsObstaclePropagationLossModel"));
   mmwaveHelper->Initialize ();
-
-
-  // parse again so you can override default values from the command line
-  cmd.Parse (argc, argv);
 
   // Get SGW/PGW and create a single RemoteHost
   Ptr<Node> mme = epcHelper->GetMmeNode ();
@@ -930,49 +957,49 @@ main (int argc, char *argv[])
 
  
   //Generate Buildings 
-  std::vector<Ptr<Building> > buildingVector;
+  //std::vector<Ptr<Building> > buildingVector;
 
-  double maxBuildingSize = 30;
-  double  maxXaxis = 640, maxYaxis = 370, minxAxis = 340, minYaxis = 310;
+  //double maxBuildingSize = 30;
+  //double  maxXaxis = 640, maxYaxis = 370, minxAxis = 340, minYaxis = 310;
 
-  for(uint32_t buildingindex = 0; buildingindex < 8; buildingindex++)
-  {
-      Ptr < Building > building = Create<Building> ();
+  //for(uint32_t buildingindex = 0; buildingindex < 8; buildingindex++)
+  //{
+    //  Ptr < Building > building = Create<Building> ();
 
-      std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (minxAxis, minYaxis, 
-                maxXaxis, maxYaxis, maxBuildingSize, m_previousBlocks);
-      m_previousBlocks = std::get<1> (pairBuildings);
-      Box box = std::get<0> (pairBuildings);
-      Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
-      randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
-      randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
-      double buildingHeight = randomBuildingZ->GetValue ();
+      //std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (minxAxis, minYaxis, 
+        //        maxXaxis, maxYaxis, maxBuildingSize, m_previousBlocks);
+      //m_previousBlocks = std::get<1> (pairBuildings);
+//      Box box = std::get<0> (pairBuildings);
+  //    Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
+    //  randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
+      //randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
+      //double buildingHeight = randomBuildingZ->GetValue ();
 
-      building->SetBoundaries (Box (box.xMin, box.xMax,
-                                    box.yMin,  box.yMax,
-                                    0.0, buildingHeight));
+      //building->SetBoundaries (Box (box.xMin, box.xMax,
+   //                                 box.yMin,  box.yMax,
+///                                    0.0, buildingHeight));
       
-      buildingVector.push_back (building);
-  }
-  maxXaxis = 640, maxYaxis = 720, minxAxis = 340, minYaxis = 650;
-    for(uint32_t buildingindex = 0; buildingindex < 8; buildingindex++)
-  {
-      Ptr < Building > building = Create<Building> ();
+     // buildingVector.push_back (building);
+//  }
+ // maxXaxis = 640, maxYaxis = 720, minxAxis = 340, minYaxis = 650;
+  //  for(uint32_t buildingindex = 0; buildingindex < 8; /buildingindex++)
+//  {
+      //Ptr < Building > building = Create<Building> ();
 
-      std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (340, 650, 
-                640, 720, maxBuildingSize, m_previousBlocks);
-      m_previousBlocks = std::get<1> (pairBuildings);
-      Box box = std::get<0> (pairBuildings);
-      Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
-      randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
-      randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
-      double buildingHeight = randomBuildingZ->GetValue ();
+ //     std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (340, 650, 
+   //             640, 720, maxBuildingSize, m_previousBlocks);
+    //  m_previousBlocks = std::get<1> (pairBuildings);
+      //Box box = std::get<0> (pairBuildings);
+      //Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
+      //randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
+      //randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
+      //double buildingHeight = randomBuildingZ->GetValue ();
 
-      building->SetBoundaries (Box (box.xMin, box.xMax,
-                                    box.yMin,  box.yMax,
-                                    0.0, buildingHeight));
-      buildingVector.push_back (building);
-  }
+      //building->SetBoundaries (Box (box.xMin, box.xMax,
+        //                            box.yMin,  box.yMax,
+          //                          0.0, buildingHeight));
+      //buildingVector.push_back (building);
+ // }
   
 
 
@@ -980,40 +1007,36 @@ main (int argc, char *argv[])
   Ptr<ListPositionAllocator> ltepositionAloc = CreateObject<ListPositionAllocator> ();
     
   Ptr<ListPositionAllocator> apPositionAlloc = CreateObject<ListPositionAllocator> ();
-    // Ptr<ListPositionAllocator> staPositionAllocator = CreateObject<ListPositionAllocator> ();
-
-  // staPositionAllocator->Add (Vector (248,248,1.5));
-  // staPositionAllocator->Add (Vector (502,248,1.5));
-  // staPositionAllocator->Add (Vector (752,252,1.5));
-  // staPositionAllocator->Add (Vector (202,502,1.5));
-  // staPositionAllocator->Add (Vector (402,506,1.5));
-  // staPositionAllocator->Add (Vector (610,509,1.5));
-  // staPositionAllocator->Add (Vector (815,514,1.5));
-  // staPositionAllocator->Add (Vector (259,754,1.5));
-  // staPositionAllocator->Add (Vector (509,758,1.5));
-  // staPositionAllocator->Add (Vector (759,758,1.5));
-  // double x_random, y_random;
-  // for (uint32_t i = 0; i < ueNodes.GetN (); i++)
-  //   {
-  //     x_random = (rand () % 1000) + 1;
-  //     y_random = (rand () % 1000) + 1;
-  //     staPositionAllocator->Add (Vector (x_random, y_random, 1.5));
-  //   }
-
-  // ueMobility.SetPositionAllocator (staPositionAllocator);
-  ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-                                   "MinX", DoubleValue (166.0),
-                                   "MinY", DoubleValue (333.0),
-                                   "DeltaX", DoubleValue (166.0),
-                                   "DeltaY", DoubleValue (333.0),
-                                   "GridWidth", UintegerValue (5),
-                                   "LayoutType", StringValue ("RowFirst"));
-  // ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-  //   "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
-  //   "Speed", StringValue("ns3::UniformRandomVariable[Min=10|Max=16]"));
-  ueMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  if(mobilityType == 0)
+    {
+      ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+                                       "MinX", DoubleValue (166.0),
+                                       "MinY", DoubleValue (333.0),
+                                       "DeltaX", DoubleValue (166.0),
+                                       "DeltaY", DoubleValue (333.0),
+                                       "GridWidth", UintegerValue (5),
+                                       "LayoutType", StringValue ("RowFirst"));
+      ueMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+    }
+  else if (mobilityType == 1)
+  {
+    Ptr<ListPositionAllocator> staPositionAllocator = CreateObject<ListPositionAllocator> ();
+    double x_random, y_random;
+    for(uint32_t i = 0; i < ueNodes.GetN(); i ++)
+    {
+      x_random = (rand() % 1000) + 1;
+      y_random = (rand() % 1000) + 1;
+      staPositionAllocator->Add (Vector (x_random, y_random, 1.5));
+    }
+    ueMobility.SetPositionAllocator(staPositionAllocator);
+    ueMobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
+      "Bounds", RectangleValue (Rectangle (0, 1000, 0, 1000)),
+      "Speed", StringValue("ns3::UniformRandomVariable[Min=" + std::to_string(minSpeedVal) + "|Max=" + std::to_string(maxSpeedVal) + "]"));
+  }
+  
+  
   ueMobility.Install (ueNodes);
-  BuildingsHelper::Install(ueNodes);
+  //BuildingsHelper::Install(ueNodes);
     for (uint32_t i = 0; i < ueNodes.GetN (); i++)
   {
     Ptr<MobilityModel> model = ueNodes.Get (i)->GetObject<MobilityModel> ();
@@ -1034,7 +1057,7 @@ main (int argc, char *argv[])
   gNbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   gNbMobility.SetPositionAllocator (apPositionAlloc);
   gNbMobility.Install (mmWaveEnbNodes);
-  BuildingsHelper::Install(allEnbNodes);
+  //BuildingsHelper::Install(allEnbNodes);
   
   AnimationInterface::SetConstantPosition(mme,580,580);
   AnimationInterface::SetConstantPosition(pgw,640,580);
@@ -1071,25 +1094,25 @@ main (int argc, char *argv[])
 
    //Handover store in file
   std::fstream fileout;
-  fileout.open(handoverfilename,std::ios::out | std::ios::trunc);
+  fileout.open(outputDir + handoverfilename,std::ios::out | std::ios::trunc);
   fileout << "Time,Event,IMSI,CellId,RNTI,TargetCellId";
   fileout << std::endl; 
 
+  std::cout << "outputDir: " << outputDir << std::endl;
   //MCS and other rxtrace report file
   std::fstream tracefile1;
-  
-  tracefile1.open (tracefilename1, std::ios::out | std::ios::trunc);
+  tracefile1.open (outputDir + tracefilename1, std::ios::out | std::ios::trunc);
   tracefile1 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
   tracefile1 << std::endl;
   std::ofstream stateChange;
-  stateChange.open (stateChangefile, std::ios::out | std::ios::trunc);
+  stateChange.open (outputDir + stateChangefile, std::ios::out | std::ios::trunc);
   stateChange << "Time,Old_state,New_state" << std::endl;
   std::fstream tracefile2;
-  tracefile2.open (tracefilename2, std::ios::out | std::ios::trunc);
+  tracefile2.open (outputDir + tracefilename2, std::ios::out | std::ios::trunc);
   tracefile2 << "DL/UL,time,frame,subF,slot,1stSym,symbol#,cellId,rnti,ccId,tbSize,mcs,rv,SINR(dB),corrupt,TBler,SINR_MIN(dB)";
   tracefile2 << std::endl;
   std::ofstream energyFile;
-  energyFile.open (energyFileName,std::ios::out | std::ios::trunc);
+  energyFile.open (outputDir + energyFileName,std::ios::out | std::ios::trunc);
   energyFile << "Time,EnergyConsumption,StateEnergy" << std::endl;
   /*Energy Framework*/
   BasicEnergySourceHelper basicSourceHelper;
@@ -1128,7 +1151,7 @@ main (int argc, char *argv[])
   dlClient.SetAttribute ("NodeTraceHelperCallBack", CallbackValue (MakeBoundCallback (readNodeTrace, &mmWaveEnbNodes)));
   dlClient.SetAttribute ("TracePath", StringValue (outputDir + "/TraceDataDashpensieve"));
   dlClient.SetAttribute("AbrLogPath", StringValue (outputDir + "/AbrDataDashpensieve"));
-
+  dlClient.SetAttribute("AbrPort", UintegerValue(AbrPortVal));
 
   dlClient.SetAttribute ("Timeout", TimeValue(Seconds(-1)));
 
@@ -1177,10 +1200,10 @@ main (int argc, char *argv[])
       Simulator::Schedule (Seconds (i * simTime / numPrints), &PrintPosition, ueNodes.Get (0));
     }
   //TODO  SIGSEGV ERROR
-  for (size_t i = 0; i < buildingVector.size(); i++)
-  {
-    MobilityBuildingInfo (buildingVector[i]);
-  }
+  //for (size_t i = 0; i < buildingVector.size(); i++)
+//  {
+  //  MobilityBuildingInfo (buildingVector[i]);
+ // }
 
   //BuildingsHelper::MakeMobilityModelConsistent ();
   //Simulator::Stop (Seconds (simTime));
@@ -1233,11 +1256,17 @@ main (int argc, char *argv[])
   anim.UpdateNodeDescription(pgw,"PGW");
   anim.UpdateNodeDescription(mme,"MME");
   anim.UpdateNodeDescription(remoteHostContainer.Get(0),"Remote Host");
-  p2ph.EnablePcapAll ("multicell-stat-dash");
+  // p2ph.EnablePcapAll ("multicell-stat-dash");
+  // auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  // tm *ltm = localtime(&timenow);
+  // std::stringstream pcapFileName;
+  // pcapFileName << "multicell-stat-dash" << ltm->tm_year << ltm->;
+  // PcapHelperForDevice::EnablePcap(pcapFileName.str(), ueNodes.Get(8));
+  std::cout << "outputDir : " << outputDir << std::endl;
   auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   std::cout << "Simulation started at: " << ctime(&timenow) << std::endl; 
   std::fstream simtimefile;
-  simtimefile.open(simfilename,std::ios::out | std::ios::trunc);
+  simtimefile.open(outputDir + simfilename,std::ios::out | std::ios::trunc);
   simtimefile << "Type,Simulation Time,RealTime" << std::endl;
   simtimefile << "Start," << Simulator::Now().GetSeconds() << "," << ctime(&timenow) << std::endl;
 
