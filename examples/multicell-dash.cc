@@ -707,7 +707,7 @@ main (int argc, char *argv[])
 
   std::list<Box>  m_previousBlocks;
   double nodeTraceInterval = 1;
-  
+  uint16_t gNbNum = 1;
   double udpAppStartTime = 0.4; //seconds
 
   int mobilityType = 0;     //default without mobility
@@ -721,6 +721,7 @@ main (int argc, char *argv[])
   cmd.AddValue("MinSpeed", "Minimum Speed of the UE", minSpeedVal);
   cmd.AddValue("MaxSpeed", "Maximum Speed of the UE", maxSpeedVal);
   cmd.AddValue("AbrPort", "Port to connect ABR proxy Server", AbrPortVal);
+  cmd.AddValue("gNbNum", "Number of gNode-Bs", gNbNum);
   cmd.Parse (argc, argv);
   
 
@@ -858,45 +859,16 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::McUePdcp::LteUplink", BooleanValue (lteUplink));
   std::cout << "Lte uplink " << lteUplink << "\n";
 
-  // settings for the 3GPP the channel
-  // Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::ChannelCondition", StringValue ("a"));
-  // Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::Scenario", StringValue ("UMi-StreetCanyon"));
-  // Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::OptionalNlos", BooleanValue (true));
-  // Config::SetDefault ("ns3::MmWave3gppPropagationLossModel::Shadowing", BooleanValue (true)); // enable or disable the shadowing effect
-  // Config::SetDefault ("ns3::MmWave3gppBuildingsPropagationLossModel::UpdateCondition", BooleanValue (true)); // enable or disable the LOS/NLOS update when the UE moves
-  // Config::SetDefault ("ns3::AntennaArrayModel::AntennaHorizontalSpacing", DoubleValue (0.5));
-  // Config::SetDefault ("ns3::AntennaArrayModel::AntennaVerticalSpacing", DoubleValue (0.5));
-  // Config::SetDefault ("ns3::MmWave3gppChannel::UpdatePeriod", TimeValue (MilliSeconds (1000))); // interval after which the channel for a moving user is updated,
   
-  //  // with spatial consistency procedure. If 0, spatial consistency is not used
-  // Config::SetDefault ("ns3::MmWave3gppChannel::DirectBeam", BooleanValue (true)); // Set true to perform the beam in the exact direction of receiver node.
-  // Config::SetDefault ("ns3::MmWave3gppChannel::Blockage", BooleanValue (true)); // use blockage or not
-  // Config::SetDefault ("ns3::MmWave3gppChannel::PortraitMode", BooleanValue (true)); // use blockage model with UT in portrait mode
-  // Config::SetDefault ("ns3::MmWave3gppChannel::NumNonselfBlocking", IntegerValue (4)); // number of non-self blocking obstacles
-
-  // set the number of antennas in the devices
   Config::SetDefault ("ns3::McUeNetDevice::AntennaNum", UintegerValue(4));
-  // Config::SetDefault ("ns3::MmWaveEnbNetDevice::AntennaNum", UintegerValue(16));
 
   Ptr<MmWaveHelper> mmwaveHelper = CreateObject<MmWaveHelper> ();
-  // if (true)
-  //   {
-  //     mmwaveHelper->SetAttribute ("PathlossModel", StringValue ("ns3::MmWave3gppBuildingsPropagationLossModel"));
-  //   }
-  // else
-  //   {
-  //     mmwaveHelper->SetAttribute ("PathlossModel", StringValue ("ns3::MmWave3gppPropagationLossModel"));
-  //   }
-  // mmwaveHelper->SetAttribute ("ChannelModel", StringValue ("ns3::MmWave3gppChannel"));
-
-  //Ptr<MmWaveHelper> mmwaveHelper = CreateObject<MmWaveHelper> ();
-  //mmwaveHelper->SetSchedulerType ("ns3::MmWaveFlexTtiMaxWeightMacScheduler");
+  
   Ptr<MmWavePointToPointEpcHelper> epcHelper = CreateObject<MmWavePointToPointEpcHelper> ();
   mmwaveHelper->SetEpcHelper (epcHelper);
   mmwaveHelper->SetHarqEnabled (harqEnabled);
   mmwaveHelper->SetMmWaveUeNetDeviceAttribute("AntennaNum", UintegerValue(4));
   mmwaveHelper->SetMmWaveEnbNetDeviceAttribute("AntennaNum", UintegerValue(16));
-//  mmwaveHelper->SetAttribute ("PathlossModel", StringValue ("ns3::BuildingsObstaclePropagationLossModel"));
   mmwaveHelper->Initialize ();
 
   // Get SGW/PGW and create a single RemoteHost
@@ -927,7 +899,6 @@ main (int argc, char *argv[])
 
   // create LTE, mmWave eNB nodes and UE node
   double gNbHeight = 10;
-  uint16_t gNbNum = 10;
   uint16_t ueNum = 10;
   NodeContainer ueNodes;
   NodeContainer mmWaveEnbNodes;
@@ -956,53 +927,7 @@ main (int argc, char *argv[])
     }
 
  
-  //Generate Buildings 
-  //std::vector<Ptr<Building> > buildingVector;
-
-  //double maxBuildingSize = 30;
-  //double  maxXaxis = 640, maxYaxis = 370, minxAxis = 340, minYaxis = 310;
-
-  //for(uint32_t buildingindex = 0; buildingindex < 8; buildingindex++)
-  //{
-    //  Ptr < Building > building = Create<Building> ();
-
-      //std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (minxAxis, minYaxis, 
-        //        maxXaxis, maxYaxis, maxBuildingSize, m_previousBlocks);
-      //m_previousBlocks = std::get<1> (pairBuildings);
-//      Box box = std::get<0> (pairBuildings);
-  //    Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
-    //  randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
-      //randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
-      //double buildingHeight = randomBuildingZ->GetValue ();
-
-      //building->SetBoundaries (Box (box.xMin, box.xMax,
-   //                                 box.yMin,  box.yMax,
-///                                    0.0, buildingHeight));
-      
-     // buildingVector.push_back (building);
-//  }
- // maxXaxis = 640, maxYaxis = 720, minxAxis = 340, minYaxis = 650;
-  //  for(uint32_t buildingindex = 0; buildingindex < 8; /buildingindex++)
-//  {
-      //Ptr < Building > building = Create<Building> ();
-
- //     std::pair<Box, std::list<Box> > pairBuildings = GenerateBuildingBounds (340, 650, 
-   //             640, 720, maxBuildingSize, m_previousBlocks);
-    //  m_previousBlocks = std::get<1> (pairBuildings);
-      //Box box = std::get<0> (pairBuildings);
-      //Ptr<UniformRandomVariable> randomBuildingZ = CreateObject<UniformRandomVariable> ();
-      //randomBuildingZ->SetAttribute ("Min",DoubleValue (1.6));
-      //randomBuildingZ->SetAttribute ("Max",DoubleValue (40));
-      //double buildingHeight = randomBuildingZ->GetValue ();
-
-      //building->SetBoundaries (Box (box.xMin, box.xMax,
-        //                            box.yMin,  box.yMax,
-          //                          0.0, buildingHeight));
-      //buildingVector.push_back (building);
- // }
   
-
-
   MobilityHelper gNbMobility, ueMobility, LteMobility;
   Ptr<ListPositionAllocator> ltepositionAloc = CreateObject<ListPositionAllocator> ();
     
@@ -1042,7 +967,7 @@ main (int argc, char *argv[])
     Ptr<MobilityModel> model = ueNodes.Get (i)->GetObject<MobilityModel> ();
     std::cout << "Node " << i << " Position " << model->GetPosition () << std::endl;
   }
-  int p[10][2] = {};
+  int p[gNbNum][2] = {};
   deployEnb(p);
   for(int i = 0; i < gNbNum; i++)
    {
@@ -1169,17 +1094,14 @@ main (int argc, char *argv[])
   for (uint32_t j = 0; j < ueNodes.GetN (); j++)
     {
 
-      if(j==8)
-      {
-        clientApps.Add (dlClient.Install (ueNodes.Get (j)));
-        Ptr<NetDevice> uenetDev = ueNodes.Get(j)->GetDevice(0);
-        Ptr<EpcTft> tft = Create<EpcTft> ();
-        EpcTft::PacketFilter dlpf;
-        dlpf.localPortStart = dlPort;
-        dlpf.localPortEnd = dlPort;
-        dlPort++;
-        tft->Add (dlpf);
-      }
+      clientApps.Add (dlClient.Install (ueNodes.Get (j)));
+      Ptr<NetDevice> uenetDev = ueNodes.Get(j)->GetDevice(0);
+      Ptr<EpcTft> tft = Create<EpcTft> ();
+      EpcTft::PacketFilter dlpf;
+      dlpf.localPortStart = dlPort;
+      dlpf.localPortEnd = dlPort;
+      dlPort++;
+      tft->Add (dlpf);
       //SIGSEGV error
       // enum EpsBearer::Qci q;
 
@@ -1256,12 +1178,6 @@ main (int argc, char *argv[])
   anim.UpdateNodeDescription(pgw,"PGW");
   anim.UpdateNodeDescription(mme,"MME");
   anim.UpdateNodeDescription(remoteHostContainer.Get(0),"Remote Host");
-  // p2ph.EnablePcapAll ("multicell-stat-dash");
-  // auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  // tm *ltm = localtime(&timenow);
-  // std::stringstream pcapFileName;
-  // pcapFileName << "multicell-stat-dash" << ltm->tm_year << ltm->;
-  // PcapHelperForDevice::EnablePcap(pcapFileName.str(), ueNodes.Get(8));
   std::cout << "outputDir : " << outputDir << std::endl;
   auto timenow = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   std::cout << "Simulation started at: " << ctime(&timenow) << std::endl; 
